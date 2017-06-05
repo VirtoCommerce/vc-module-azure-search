@@ -1,8 +1,8 @@
 ﻿using Microsoft.Practices.Unity;
 using VirtoCommerce.AzureSearchModule.Data;
+using VirtoCommerce.Domain.Search;
+using VirtoCommerce.Platform.Core.Common;
 using VirtoCommerce.Platform.Core.Modularity;
-using VirtoCommerce.SearchModule.Core.Model;
-using VirtoCommerce.SearchModule.Core.Model.Search;
 
 namespace VirtoCommerce.AzureSearchModule.Web
 {
@@ -19,8 +19,12 @@ namespace VirtoCommerce.AzureSearchModule.Web
         {
             base.Initialize();
 
-            _container.RegisterType<ISearchProvider, AzureSearchProvider>(new ContainerControlledLifetimeManager());
-            _container.RegisterType<ISearchQueryBuilder, AzureSearchQueryBuilder>();
+            var searchConnection = _container.Resolve<ISearchConnection>();
+
+            if (searchConnection?.Provider?.EqualsInvariant("AzureSearch") == true)
+            {
+                _container.RegisterType<ISearchProvider, AzureSearchProvider>(new ContainerControlledLifetimeManager());
+            }
         }
     }
 }
