@@ -16,7 +16,7 @@
         <owner>Virto Commerce</owner>
     </owners>
     <projectUrl>https://github.com/VirtoCommerce/vc-module-azure-search</projectUrl>
-    <iconUrl>https://github.com/VirtoCommerce/vc-module-azure-search/raw/master/VirtoCommerce.AzureSearchModule.Web/Content/logo.png</iconUrl>
+    <iconUrl>https://github.com/VirtoCommerce/vc-module-azure-search/raw/dev/VirtoCommerce.AzureSearchModule.Web/Content/logo.png</iconUrl>
     <releaseNotes>First version.</releaseNotes>
     <copyright>Copyright © 2017 Virto Commerce. All rights reserved</copyright>
     <tags>azure search</tags>

@@ -96,7 +96,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
 
             if (idsFilter != null)
             {
-                result = CreateIdsFilter(idsFilter);
+                result = CreateIdsFilter(idsFilter, availableFields);
             }
             else if (termFilter != null)
             {
@@ -126,13 +126,14 @@ namespace VirtoCommerce.AzureSearchModule.Data
             return result;
         }
 
-        private static string CreateIdsFilter(IdsFilter idsFilter)
+        private static string CreateIdsFilter(IdsFilter idsFilter, IList<Field> availableFields)
         {
             string result = null;
 
             if (idsFilter?.Values != null)
             {
-                result = GetEqualsFilterExpression(AzureSearchHelper.RawKeyFieldName, idsFilter.Values, false);
+                var availableField = availableFields.Get(AzureSearchHelper.RawKeyFieldName);
+                result = GetEqualsFilterExpression(availableField, idsFilter.Values);
             }
 
             return result;
@@ -146,8 +147,8 @@ namespace VirtoCommerce.AzureSearchModule.Data
             if (availableField != null)
             {
                 result = availableField.Type.ToString().StartsWith("Collection(")
-                    ? GetContainsFilterExpression(termFilter.FieldName, termFilter.Values)
-                    : GetEqualsFilterExpression(termFilter.FieldName, termFilter.Values, true);
+                    ? GetContainsFilterExpression(availableField, termFilter.Values)
+                    : GetEqualsFilterExpression(availableField, termFilter.Values);
             }
             else
             {
@@ -272,45 +273,38 @@ namespace VirtoCommerce.AzureSearchModule.Data
             return result;
         }
 
-        private static string GetEqualsFilterExpression(string rawName, IEnumerable<string> rawValues, bool parseValues)
+        private static string GetEqualsFilterExpression(Field availableField, IEnumerable<string> rawValues)
         {
-            var azureFieldName = AzureSearchHelper.ToAzureFieldName(rawName);
-            var values = rawValues.Where(v => !string.IsNullOrEmpty(v)).Select(v => GetFilterValue(v, parseValues)).ToArray();
+            var azureFieldName = availableField.Name;
+            var values = rawValues.Where(v => !string.IsNullOrEmpty(v)).Select(v => GetFilterValue(availableField, v)).ToArray();
             return AzureSearchHelper.JoinNonEmptyStrings(" or ", true, values.Select(v => $"{azureFieldName} eq {v}").ToArray());
         }
 
-        private static string GetContainsFilterExpression(string rawName, IEnumerable<string> rawValues)
+        public static string GetContainsFilterExpression(Field availableField, IEnumerable<string> rawValues)
         {
-            var azureFieldName = AzureSearchHelper.ToAzureFieldName(rawName);
+            var azureFieldName = availableField.Name;
             var values = rawValues.Where(v => !string.IsNullOrEmpty(v)).Select(GetStringFilterValue).ToArray();
             return AzureSearchHelper.JoinNonEmptyStrings(" or ", true, values.Select(v => $"{azureFieldName}/any(v: v eq {v})").ToArray());
         }
 
-        private static string GetFilterValue(string rawValue, bool parseValue)
+        private static string GetFilterValue(Field availableField, string rawValue)
         {
-            string result = null;
+            string result;
 
-            if (parseValue)
+            if (availableField?.Type == DataType.Boolean)
             {
-                DateTime dateValue;
-                long integerValue;
-                double doubleValue;
-
-                if (DateTime.TryParse(rawValue, CultureInfo.InvariantCulture, DateTimeStyles.None, out dateValue))
-                {
-                    result = rawValue;
-                }
-                else if (long.TryParse(rawValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out integerValue))
-                {
-                    result = rawValue;
-                }
-                else if (double.TryParse(rawValue, NumberStyles.Float, CultureInfo.InvariantCulture, out doubleValue))
-                {
-                    result = rawValue;
-                }
+                result = rawValue.ToLowerInvariant();
+            }
+            else if (availableField?.Type != DataType.String)
+            {
+                result = rawValue;
+            }
+            else
+            {
+                result = GetStringFilterValue(rawValue);
             }
 
-            return result ?? GetStringFilterValue(rawValue);
+            return result;
         }
 
         private static string GetStringFilterValue(string rawValue)
