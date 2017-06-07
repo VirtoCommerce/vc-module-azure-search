@@ -1,1 +1,5 @@
-﻿VirtoCommerce.Domain.dll
+﻿Microsoft.Azure.Search.xml
+Microsoft.Rest.ClientRuntime.xml
+Microsoft.Rest.ClientRuntime.Azure.xml
+Microsoft.Spatial.xml
+VirtoCommerce.Domain.dll
