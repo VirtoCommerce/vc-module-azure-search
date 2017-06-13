@@ -17,15 +17,10 @@ namespace VirtoCommerce.AzureSearchModule.Data
         private readonly Dictionary<string, IList<Field>> _mappings = new Dictionary<string, IList<Field>>();
 
         public AzureSearchProvider(ISearchConnection connection)
-            : this(GetServiceName(connection), GetAccessKey(connection), connection?.Scope)
         {
-        }
-
-        public AzureSearchProvider(string serviceName, string accessKey, string scope)
-        {
-            ServiceName = serviceName;
-            Scope = scope;
-            _accessKey = accessKey;
+            ServiceName = GetServiceName(connection);
+            _accessKey = GetAccessKey(connection);
+            Scope = connection?.Scope;
         }
 
         private SearchServiceClient _client;
@@ -286,7 +281,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
         protected virtual string GetIndexName(string documentType)
         {
             // Use different index for each document type
-            return string.Join("-", Scope, documentType);
+            return string.Join("-", Scope, documentType).ToLowerInvariant();
         }
 
         protected virtual Task<bool> IndexExistsAsync(string indexName)

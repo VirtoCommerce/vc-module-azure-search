@@ -20,7 +20,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
 
         public static string ToAzureFieldName(string fieldName)
         {
-            return FieldNamePrefix + Regex.Replace(fieldName, @"\W", "_").ToLowerInvariant();
+            return !string.IsNullOrEmpty(fieldName) ? FieldNamePrefix + Regex.Replace(fieldName, @"\W", "_").ToLowerInvariant() : null;
         }
 
         public static string FromAzureFieldName(string azureFieldName)

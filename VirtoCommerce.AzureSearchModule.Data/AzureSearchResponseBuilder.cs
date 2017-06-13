@@ -85,37 +85,40 @@ namespace VirtoCommerce.AzureSearchModule.Data
             if (termAggregationRequest != null)
             {
                 var azureFieldName = AzureSearchHelper.ToAzureFieldName(termAggregationRequest.FieldName);
-                var facetResults = facets.ContainsKey(azureFieldName) ? facets[azureFieldName] : null;
-
-                if (facetResults != null && facetResults.Any())
+                if (!string.IsNullOrEmpty(azureFieldName))
                 {
-                    result = new AggregationResponse
-                    {
-                        Id = (termAggregationRequest.Id ?? termAggregationRequest.FieldName).ToLowerInvariant(),
-                        Values = new List<AggregationResponseValue>(),
-                    };
+                    var facetResults = facets.ContainsKey(azureFieldName) ? facets[azureFieldName] : null;
 
-                    var values = termAggregationRequest.Values;
+                    if (facetResults != null && facetResults.Any())
+                    {
+                        result = new AggregationResponse
+                        {
+                            Id = (termAggregationRequest.Id ?? termAggregationRequest.FieldName).ToLowerInvariant(),
+                            Values = new List<AggregationResponseValue>(),
+                        };
 
-                    if (values != null)
-                    {
-                        foreach (var value in values)
+                        var values = termAggregationRequest.Values;
+
+                        if (values != null)
                         {
-                            var facetResult = facetResults.FirstOrDefault(r => r.Value.ToStringInvariant().EqualsInvariant(value));
-                            AddAggregationValue(result, facetResult, value);
-                        }
-                    }
-                    else
-                    {
-                        // Return all facet results if values are not defined
-                        foreach (var facetResult in facetResults)
-                        {
-                            var aggregationValue = new AggregationResponseValue
+                            foreach (var value in values)
                             {
-                                Id = facetResult.Value.ToStringInvariant(),
-                                Count = facetResult.Count ?? 0,
-                            };
-                            result.Values.Add(aggregationValue);
+                                var facetResult = facetResults.FirstOrDefault(r => r.Value.ToStringInvariant().EqualsInvariant(value));
+                                AddAggregationValue(result, facetResult, value);
+                            }
+                        }
+                        else
+                        {
+                            // Return all facet results if values are not defined
+                            foreach (var facetResult in facetResults)
+                            {
+                                var aggregationValue = new AggregationResponseValue
+                                {
+                                    Id = facetResult.Value.ToStringInvariant(),
+                                    Count = facetResult.Count ?? 0,
+                                };
+                                result.Values.Add(aggregationValue);
+                            }
                         }
                     }
                 }
@@ -131,20 +134,23 @@ namespace VirtoCommerce.AzureSearchModule.Data
             if (rangeAggregationRequest != null)
             {
                 var azureFieldName = AzureSearchHelper.ToAzureFieldName(rangeAggregationRequest.FieldName);
-                var facetResults = facets.ContainsKey(azureFieldName) ? facets[azureFieldName] : null;
-
-                if (facetResults != null && facetResults.Any())
+                if (!string.IsNullOrEmpty(azureFieldName))
                 {
-                    result = new AggregationResponse
-                    {
-                        Id = (rangeAggregationRequest.Id ?? rangeAggregationRequest.FieldName).ToLowerInvariant(),
-                        Values = new List<AggregationResponseValue>(),
-                    };
+                    var facetResults = facets.ContainsKey(azureFieldName) ? facets[azureFieldName] : null;
 
-                    foreach (var value in rangeAggregationRequest.Values)
+                    if (facetResults != null && facetResults.Any())
                     {
-                        var facetResult = GetRangeFacetResult(value, facetResults);
-                        AddAggregationValue(result, facetResult, value.Id);
+                        result = new AggregationResponse
+                        {
+                            Id = (rangeAggregationRequest.Id ?? rangeAggregationRequest.FieldName).ToLowerInvariant(),
+                            Values = new List<AggregationResponseValue>(),
+                        };
+
+                        foreach (var value in rangeAggregationRequest.Values)
+                        {
+                            var facetResult = GetRangeFacetResult(value, facetResults);
+                            AddAggregationValue(result, facetResult, value.Id);
+                        }
                     }
                 }
             }
