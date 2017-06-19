@@ -6,6 +6,7 @@ using Microsoft.Azure.Search;
 using Microsoft.Azure.Search.Models;
 using Microsoft.Rest.Azure;
 using VirtoCommerce.Domain.Search;
+using VirtoCommerce.Platform.Core.Settings;
 using IndexingResult = VirtoCommerce.Domain.Search.IndexingResult;
 
 namespace VirtoCommerce.AzureSearchModule.Data
@@ -13,14 +14,20 @@ namespace VirtoCommerce.AzureSearchModule.Data
     [CLSCompliant(false)]
     public class AzureSearchProvider : ISearchProvider
     {
+        public const string ContentAnalyzerName = "content_analyzer";
+        public const string NGramFilterName = "custom_ngram";
+        public const string EdgeNGramFilterName = "custom_edge_ngram";
+
         private readonly string _accessKey;
+        private readonly ISettingsManager _settingsManager;
         private readonly Dictionary<string, IList<Field>> _mappings = new Dictionary<string, IList<Field>>();
 
-        public AzureSearchProvider(ISearchConnection connection)
+        public AzureSearchProvider(ISearchConnection connection, ISettingsManager settingsManager)
         {
             ServiceName = GetServiceName(connection);
             _accessKey = GetAccessKey(connection);
             Scope = connection?.Scope;
+            _settingsManager = settingsManager;
         }
 
         private SearchServiceClient _client;
@@ -210,6 +217,12 @@ namespace VirtoCommerce.AzureSearchModule.Data
                 IsSortable = field.IsFilterable && !isCollection,
             };
 
+            if (providerField.IsSearchable)
+            {
+                providerField.IndexAnalyzer = ContentAnalyzerName;
+                providerField.SearchAnalyzer = AnalyzerName.StandardLucene;
+            }
+
             return providerField;
         }
 
@@ -299,13 +312,45 @@ namespace VirtoCommerce.AzureSearchModule.Data
 
         protected virtual Index CreateIndexDefinition(string indexName, IList<Field> providerFields)
         {
+            var minGram = GetMinGram();
+            var maxGram = GetMaxGram();
+
             var index = new Index
             {
                 Name = indexName,
                 Fields = providerFields.OrderBy(f => f.Name).ToArray(),
+                TokenFilters = new TokenFilter[]
+                {
+                    new NGramTokenFilterV2(NGramFilterName, minGram, maxGram),
+                    new EdgeNGramTokenFilterV2(EdgeNGramFilterName, minGram, maxGram)
+                },
+                Analyzers = new Analyzer[]
+                {
+                    new CustomAnalyzer
+                    {
+                        Name = ContentAnalyzerName,
+                        Tokenizer = TokenizerName.Standard,
+                        TokenFilters = new[] { TokenFilterName.Lowercase, GetTokenFilterName() }
+                    }
+                },
             };
 
             return index;
+        }
+
+        protected virtual string GetTokenFilterName()
+        {
+            return _settingsManager.GetValue("VirtoCommerce.Search.AzureSearch.TokenFilter", EdgeNGramFilterName);
+        }
+
+        protected virtual int GetMinGram()
+        {
+            return _settingsManager.GetValue("VirtoCommerce.Search.AzureSearch.NGramTokenFilter.MinGram", 1);
+        }
+
+        protected virtual int GetMaxGram()
+        {
+            return _settingsManager.GetValue("VirtoCommerce.Search.AzureSearch.NGramTokenFilter.MaxGram", 20);
         }
 
         #endregion

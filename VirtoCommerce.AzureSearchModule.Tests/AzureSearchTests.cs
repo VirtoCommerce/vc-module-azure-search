@@ -14,7 +14,7 @@ namespace VirtoCommerce.AzureSearchModule.Tests
             var serviceName = Environment.GetEnvironmentVariable("TestAzureSearchServiceName");
             var accessKey = Environment.GetEnvironmentVariable("TestAzureSearchAccessKey");
 
-            var provider = new AzureSearchProvider(new SearchConnection($"server={serviceName};key={accessKey};scope=test"));
+            var provider = new AzureSearchProvider(new SearchConnection($"server={serviceName};key={accessKey};scope=test"), GetSettingsManager());
             return provider;
         }
     }
