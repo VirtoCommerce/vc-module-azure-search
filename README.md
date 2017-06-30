@@ -28,11 +28,8 @@ You can configure the search configuration string either in the VC Manager UI or
 ```
 
 # Known issues
-Azure Search service supports only one set of filters which apply both to the facets and to the search request itself. This leads to the following issues:
-* If you filter documents by a field value (e.g. color:red), a facet by this field returns only this value counter.
-* Facets cannot be calculated by a filter only as it could be done with Elasticsearch, so the aggregation by a price range using multiple pricelists ordered by priority is not supported.
-
-Both issues can be resolved by sending additional requests to the Azure Search service, and this behavior will be implemented in the next version of this module.
+* Collections in a document can only contain strings. This means you cannot index a document with a collection of numbers.
+* Document field names can only contain letters, digits and underscores. When indexing a document with invalid characters in a field name, all such characters will be replaced with an underscore, which can lead to duplicate fields.
 
 # License
 Copyright (c) Virtosoftware Ltd. All rights reserved.
