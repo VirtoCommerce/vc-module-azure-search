@@ -10,13 +10,15 @@ namespace VirtoCommerce.AzureSearchModule.Data
     [CLSCompliant(false)]
     public static class AzureSearchResponseBuilder
     {
-        public static SearchResponse ToSearchResponse(this DocumentSearchResult response, SearchRequest request, string documentType)
+        public static SearchResponse ToSearchResponse(this IList<AzureSearchResult> searchResults, SearchRequest request, string documentType)
         {
+            var primaryResponse = searchResults.First().ProviderResponse;
+
             var result = new SearchResponse
             {
-                TotalCount = response.Count ?? 0,
-                Documents = response.Results.Select(ToSearchDocument).ToArray(),
-                Aggregations = GetAggregations(response.Facets, request)
+                TotalCount = primaryResponse.Count ?? 0,
+                Documents = primaryResponse.Results.Select(ToSearchDocument).ToArray(),
+                Aggregations = GetAggregations(searchResults, request)
             };
 
             return result;
@@ -44,16 +46,42 @@ namespace VirtoCommerce.AzureSearchModule.Data
         }
 
 
-        private static IList<AggregationResponse> GetAggregations(FacetResults facets, SearchRequest request)
+        private static IList<AggregationResponse> GetAggregations(IList<AzureSearchResult> searchResults, SearchRequest request)
         {
-            IList<AggregationResponse> result = null;
+            var result = new List<AggregationResponse>();
 
-            if (facets != null)
+            // Combine facets from all responses to a single FacetResults
+            var facetResults = searchResults.Where(r => r.ProviderResponse.Facets != null).SelectMany(r => r.ProviderResponse.Facets).ToList();
+            if (facetResults.Any())
             {
-                result = request.Aggregations
+                var facets = new FacetResults();
+                foreach (var keyValuePair in facetResults)
+                {
+                    facets[keyValuePair.Key] = keyValuePair.Value;
+                }
+
+                var responses = request.Aggregations
                     .Select(a => GetAggregation(a, facets))
-                    .Where(a => a != null && a.Values.Any())
-                    .ToList();
+                    .Where(a => a != null && a.Values.Any());
+
+                result.AddRange(responses);
+            }
+
+            // Add responses for aggregations with empty field name
+            foreach (var searchResult in searchResults.Where(r => !string.IsNullOrEmpty(r.AggregationId)))
+            {
+                result.Add(new AggregationResponse
+                {
+                    Id = searchResult.AggregationId,
+                    Values = new List<AggregationResponseValue>
+                        {
+                            new AggregationResponseValue
+                            {
+                                Id= searchResult.AggregationId,
+                                Count = searchResult.ProviderResponse.Count ?? 0,
+                            }
+                        }
+                });
             }
 
             return result;

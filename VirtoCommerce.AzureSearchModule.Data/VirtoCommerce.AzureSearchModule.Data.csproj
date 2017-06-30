@@ -72,6 +72,7 @@
     <Compile Include="AzureSearchProvider.cs" />
     <Compile Include="AzureSearchRequest.cs" />
     <Compile Include="AzureSearchRequestBuilder.cs" />
+    <Compile Include="AzureSearchResult.cs" />
     <Compile Include="AzureSearchResponseBuilder.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

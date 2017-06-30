@@ -4,10 +4,9 @@ using Microsoft.Azure.Search.Models;
 namespace VirtoCommerce.AzureSearchModule.Data
 {
     [CLSCompliant(false)]
-    public class AzureSearchRequest
+    public class AzureSearchResult
     {
         public string AggregationId { get; set; }
-        public string SearchText { get; set; }
-        public SearchParameters SearchParameters { get; set; }
+        public DocumentSearchResult ProviderResponse { get; set; }
     }
 }

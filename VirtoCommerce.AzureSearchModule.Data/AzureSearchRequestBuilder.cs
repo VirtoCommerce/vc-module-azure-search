@@ -11,9 +11,42 @@ namespace VirtoCommerce.AzureSearchModule.Data
     [CLSCompliant(false)]
     public class AzureSearchRequestBuilder
     {
-        public static AzureSearchRequest BuildRequest(SearchRequest request, string indexName, string documentType, IList<Field> availableFields)
+        public static IList<AzureSearchRequest> BuildRequest(SearchRequest request, string indexName, string documentType, IList<Field> availableFields)
         {
-            var result = new AzureSearchRequest
+            var result = new List<AzureSearchRequest>();
+
+            // Create additional requests for each aggregation with fillter which differs from main request filter or with empty field name.
+
+            var primaryFilter = GetFilters(request, availableFields);
+            var primaryFacets = new List<string>();
+            var facetRequests = GetFacets(request, availableFields);
+
+            foreach (var filterGroup in facetRequests.GroupBy(f => f.Filter))
+            {
+                if (filterGroup.Key == primaryFilter)
+                {
+                    primaryFacets.AddRange(filterGroup.Select(f => f.Facet));
+                }
+                else
+                {
+                    foreach (var fieldGroup in filterGroup.GroupBy(f => f.FieldName))
+                    {
+                        if (string.IsNullOrEmpty(fieldGroup.Key))
+                        {
+                            foreach (var facetRequest in fieldGroup)
+                            {
+                                result.Add(CreateFacetRequest(facetRequest.Id, facetRequest.Filter, null));
+                            }
+                        }
+                        else
+                        {
+                            result.Add(CreateFacetRequest(null, filterGroup.Key, filterGroup.Select(f => f.Facet).ToArray()));
+                        }
+                    }
+                }
+            }
+
+            var primaryRequest = new AzureSearchRequest
             {
                 SearchText = GetSearchText(request),
                 SearchParameters = new SearchParameters
@@ -21,15 +54,33 @@ namespace VirtoCommerce.AzureSearchModule.Data
                     QueryType = QueryType.Simple,
                     SearchMode = SearchMode.All,
                     IncludeTotalResultCount = true,
-                    Filter = GetFilters(request, availableFields),
-                    Facets = GetFacets(request, availableFields),
+                    Filter = primaryFilter,
+                    Facets = primaryFacets,
                     OrderBy = GetSorting(request, availableFields),
                     Skip = request.Skip,
                     Top = request.Take,
                 }
             };
 
+            result.Insert(0, primaryRequest);
+
             return result;
+        }
+
+        private static AzureSearchRequest CreateFacetRequest(string aggregationId, string filter, IList<string> facets)
+        {
+            return new AzureSearchRequest
+            {
+                AggregationId = aggregationId,
+                SearchParameters = new SearchParameters
+                {
+                    Filter = filter,
+                    Facets = facets,
+                    IncludeTotalResultCount = true,
+                    Skip = 0,
+                    Top = 0,
+                }
+            };
         }
 
 
@@ -312,9 +363,17 @@ namespace VirtoCommerce.AzureSearchModule.Data
             return $"'{rawValue.Replace("'", "''")}'";
         }
 
-        private static IList<string> GetFacets(SearchRequest request, IList<Field> availableFields)
+        private class FacetRequest
         {
-            var result = new List<string>();
+            public string Id { get; set; }
+            public string FieldName { get; set; }
+            public string Filter { get; set; }
+            public string Facet { get; set; }
+        }
+
+        private static IList<FacetRequest> GetFacets(SearchRequest request, IList<Field> availableFields)
+        {
+            var result = new List<FacetRequest>();
 
             if (request.Aggregations != null)
             {
@@ -334,9 +393,17 @@ namespace VirtoCommerce.AzureSearchModule.Data
                         facet = CreateRangeAggregationRequest(rangeAggregationRequest, availableFields);
                     }
 
-                    if (!string.IsNullOrEmpty(facet))
+                    if (aggregation.Filter != null || !string.IsNullOrEmpty(facet))
                     {
-                        result.Add(facet);
+                        var facetRequest = new FacetRequest
+                        {
+                            Id = aggregation.Id,
+                            FieldName = aggregation.FieldName,
+                            Filter = GetFilterExpressionRecursive(aggregation.Filter, availableFields),
+                            Facet = facet,
+                        };
+
+                        result.Add(facetRequest);
                     }
                 }
             }

@@ -121,10 +121,18 @@ namespace VirtoCommerce.AzureSearchModule.Data
                 var availableFields = await GetMappingAsync(indexName);
                 var indexClient = GetSearchIndexClient(indexName);
 
-                var providerRequest = AzureSearchRequestBuilder.BuildRequest(request, indexName, documentType, availableFields);
-                var providerResponse = await indexClient.Documents.SearchAsync(providerRequest?.SearchText, providerRequest?.SearchParameters);
+                var providerRequests = AzureSearchRequestBuilder.BuildRequest(request, indexName, documentType, availableFields);
+                var providerResponses = await Task.WhenAll(providerRequests.Select(r => indexClient.Documents.SearchAsync(r?.SearchText, r?.SearchParameters)));
 
-                var result = providerResponse.ToSearchResponse(request, documentType);
+                // Copy aggregation ID from request to response
+                var searchResults = providerResponses.Select((response, i) => new AzureSearchResult
+                {
+                    AggregationId = providerRequests[i].AggregationId,
+                    ProviderResponse = response,
+                })
+                .ToArray();
+
+                var result = searchResults.ToSearchResponse(request, documentType);
                 return result;
             }
             catch (Exception ex)
