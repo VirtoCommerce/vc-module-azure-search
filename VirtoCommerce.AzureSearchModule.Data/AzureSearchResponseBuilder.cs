@@ -68,7 +68,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
             }
 
             // Add responses for aggregations with empty field name
-            foreach (var searchResult in searchResults.Where(r => !string.IsNullOrEmpty(r.AggregationId)))
+            foreach (var searchResult in searchResults.Where(r => !string.IsNullOrEmpty(r.AggregationId) && r.ProviderResponse.Count > 0))
             {
                 result.Add(new AggregationResponse
                 {
