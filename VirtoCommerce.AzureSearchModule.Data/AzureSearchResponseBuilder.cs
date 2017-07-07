@@ -38,7 +38,15 @@ namespace VirtoCommerce.AzureSearchModule.Data
                 }
                 else
                 {
-                    result[key] = kvp.Value;
+                    var value = kvp.Value;
+
+                    // Convert DateTimeOffset to DateTime
+                    if (value is DateTimeOffset)
+                    {
+                        value = ((DateTimeOffset)value).UtcDateTime;
+                    }
+
+                    result[key] = value;
                 }
             }
 
