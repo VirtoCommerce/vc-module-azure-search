@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -443,6 +443,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
                     .Where(v => v > 0m)
                     .Distinct()
                     .OrderBy(v => v)
+                    .Select(v => v.ToString(CultureInfo.InvariantCulture))
                     .ToArray();
 
                 var values = string.Join("|", edgeValues);
@@ -453,9 +454,9 @@ namespace VirtoCommerce.AzureSearchModule.Data
             return result;
         }
 
-        private static decimal? ConvertToDecimal(string input)
+        private static decimal ConvertToDecimal(string input)
         {
-            decimal? result = null;
+            var result = 0m;
 
             decimal value;
             if (decimal.TryParse(input, NumberStyles.Float, CultureInfo.InvariantCulture, out value))

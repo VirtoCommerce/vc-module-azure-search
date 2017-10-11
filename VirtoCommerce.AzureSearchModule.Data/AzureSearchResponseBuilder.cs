@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Azure.Search.Models;
@@ -199,7 +199,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
             var lower = value.Lower == null ? null : value.Lower.Length == 0 ? null : value.Lower == "0" ? null : value.Lower;
             var upper = value.Upper;
 
-            return facetResults.FirstOrDefault(r => r.Count > 0 && r.From?.ToString() == lower && r.To?.ToString() == upper);
+            return facetResults.FirstOrDefault(r => r.Count > 0 && r.From?.ToStringInvariant() == lower && r.To?.ToStringInvariant() == upper);
         }
 
         private static void AddAggregationValue(AggregationResponse aggregation, FacetResult facetResult, string valueId)
