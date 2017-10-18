@@ -17,7 +17,10 @@ namespace VirtoCommerce.AzureSearchModule.Data
 
             // Create additional requests for each aggregation with fillter which differs from main request filter or with empty field name.
 
+            var searchText = GetSearchText(request);
             var primaryFilter = GetFilters(request, availableFields);
+            var sorting = GetSorting(request, availableFields);
+
             var primaryFacets = new List<string>();
             var facetRequests = GetFacets(request, availableFields);
 
@@ -35,54 +38,43 @@ namespace VirtoCommerce.AzureSearchModule.Data
                         {
                             foreach (var facetRequest in fieldGroup)
                             {
-                                result.Add(CreateFacetRequest(facetRequest.Id, facetRequest.Filter, null));
+                                result.Add(CreateRequest(searchText, facetRequest.Id, facetRequest.Filter, null, null, 0, 0));
                             }
                         }
                         else
                         {
-                            result.Add(CreateFacetRequest(null, filterGroup.Key, filterGroup.Select(f => f.Facet).ToArray()));
+                            result.Add(CreateRequest(searchText, null, filterGroup.Key, filterGroup.Select(f => f.Facet).ToArray(), null, 0, 0));
                         }
                     }
                 }
             }
 
-            var primaryRequest = new AzureSearchRequest
-            {
-                SearchText = GetSearchText(request),
-                SearchParameters = new SearchParameters
-                {
-                    QueryType = QueryType.Simple,
-                    SearchMode = SearchMode.All,
-                    IncludeTotalResultCount = true,
-                    Filter = primaryFilter,
-                    Facets = primaryFacets,
-                    OrderBy = GetSorting(request, availableFields),
-                    Skip = request.Skip,
-                    Top = request.Take,
-                }
-            };
+            var primaryRequest = CreateRequest(searchText, null, primaryFilter, primaryFacets, sorting, request.Skip, request.Take);
 
             result.Insert(0, primaryRequest);
 
             return result;
         }
 
-        private static AzureSearchRequest CreateFacetRequest(string aggregationId, string filter, IList<string> facets)
+        private static AzureSearchRequest CreateRequest(string searchText, string aggregationId, string filter, IList<string> facets, IList<string> orderBy, int skip, int top)
         {
             return new AzureSearchRequest
             {
+                SearchText = searchText,
                 AggregationId = aggregationId,
                 SearchParameters = new SearchParameters
                 {
+                    QueryType = QueryType.Simple,
+                    SearchMode = SearchMode.All,
+                    IncludeTotalResultCount = true,
                     Filter = filter,
                     Facets = facets,
-                    IncludeTotalResultCount = true,
-                    Skip = 0,
-                    Top = 0,
+                    OrderBy = orderBy,
+                    Skip = skip,
+                    Top = top,
                 }
             };
         }
-
 
         private static string GetSearchText(SearchRequest request)
         {
