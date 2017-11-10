@@ -32,7 +32,7 @@ You can configure the search configuration string either in the VC Manager UI or
 * Document field names can only contain letters, digits and underscores. When indexing a document with invalid characters in a field name, all such characters will be replaced with an underscore, which can lead to duplicate fields.
 
 # License
-Copyright (c) Virtosoftware Ltd. All rights reserved.
+Copyright (c) Virto Solutions LTD. All rights reserved.
 
 Licensed under the Virto Commerce Open Software License (the "License"); you
 may not use this file except in compliance with the License. You may
