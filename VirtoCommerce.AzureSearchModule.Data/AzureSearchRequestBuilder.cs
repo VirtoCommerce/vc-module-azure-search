@@ -15,6 +15,14 @@ namespace VirtoCommerce.AzureSearchModule.Data
         {
             var result = new List<AzureSearchRequest>();
 
+            if (!string.IsNullOrEmpty(request.RawQuery))
+            {
+                var searchRequest = CreateRawQuerySearchRequest(request, availableFields);
+                result.Add(searchRequest);
+
+                return result;
+            }
+
             // Create additional requests for each aggregation with fillter which differs from main request filter or with empty field name.
 
             var searchText = GetSearchText(request);
@@ -54,6 +62,19 @@ namespace VirtoCommerce.AzureSearchModule.Data
             result.Insert(0, primaryRequest);
 
             return result;
+        }
+
+        private static AzureSearchRequest CreateRawQuerySearchRequest(SearchRequest request, IList<Field> availableFields)
+        {
+            var searchParameters = new SearchParameters
+            {
+                Filter = request.RawQuery,
+                OrderBy = GetSorting(request, availableFields),
+                Skip = request.Skip,
+                Top = request.Take
+            };
+
+            return new AzureSearchRequest { SearchParameters = searchParameters };
         }
 
         private static AzureSearchRequest CreateRequest(string searchText, string aggregationId, string filter, IList<string> facets, IList<string> orderBy, int skip, int top)
