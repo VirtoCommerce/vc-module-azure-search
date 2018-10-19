@@ -48,14 +48,26 @@ namespace VirtoCommerce.AzureSearchModule.Data
                     }
                 }
             }
-
             var primaryRequest = CreateRequest(searchText, null, primaryFilter, primaryFacets, sorting, request.Skip, request.Take);
-
-            result.Insert(0, primaryRequest);
-
+            if (!string.IsNullOrEmpty(request.RawQuery))
+            {
+                primaryRequest = CreateRawQueryRequest(request, sorting, request.Skip, request.Take);
+            }
+            result.Insert(0, primaryRequest); result.Insert(0, primaryRequest);
             return result;
         }
 
+        private static AzureSearchRequest CreateRawQueryRequest(SearchRequest request, IList<string> sorting, int skip, int take)
+        {
+            var searchParameters = new SearchParameters
+            {
+                Filter = request.RawQuery,
+                OrderBy = sorting,
+                Skip = skip,
+                Top = take
+            };
+            return new AzureSearchRequest { SearchParameters = searchParameters };
+        }
         private static AzureSearchRequest CreateRequest(string searchText, string aggregationId, string filter, IList<string> facets, IList<string> orderBy, int skip, int top)
         {
             return new AzureSearchRequest
