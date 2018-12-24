@@ -53,7 +53,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
             {
                 primaryRequest = CreateRawQueryRequest(request, sorting, request.Skip, request.Take);
             }
-            result.Insert(0, primaryRequest); result.Insert(0, primaryRequest);
+            result.Insert(0, primaryRequest);
             return result;
         }
 
