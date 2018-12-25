@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <module>
     <id>VirtoCommerce.AzureSearch</id>
-    <version>1.1.4</version>
+    <version>1.1.5</version>
     <platformVersion>2.13.9</platformVersion>
     <dependencies>
         <dependency id="VirtoCommerce.Core" version="2.25.16" />
@@ -18,7 +18,7 @@
     <projectUrl>https://virtocommerce.com/apps/extensions/virto-azure-search-module</projectUrl>
     <iconUrl>https://github.com/VirtoCommerce/vc-module-azure-search/raw/dev/VirtoCommerce.AzureSearchModule.Web/Content/logo.png</iconUrl>
     <releaseNotes>First version.</releaseNotes>
-    <copyright>Copyright © 2017 Virto Commerce. All rights reserved</copyright>
+    <copyright>Copyright © 2018 Virto Commerce. All rights reserved</copyright>
     <tags>azure search</tags>
 
     <assemblyFile>VirtoCommerce.AzureSearchModule.Web.dll</assemblyFile>
