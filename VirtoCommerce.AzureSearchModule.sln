@@ -1,13 +1,17 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.26430.12
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29123.88
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VirtoCommerce.AzureSearchModule.Web", "VirtoCommerce.AzureSearchModule.Web\VirtoCommerce.AzureSearchModule.Web.csproj", "{8E31AF8C-5EFC-4795-B9FE-9229CD3FFA90}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{485B4FBF-6A56-4E2F-AAF4-0C01E747811D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VirtoCommerce.AzureSearchModule.Data", "VirtoCommerce.AzureSearchModule.Data\VirtoCommerce.AzureSearchModule.Data.csproj", "{3349FD5E-374B-494B-981D-27032B4C066C}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{127C1D4A-ECFB-4DDC-AAA3-7132C2D3D6BC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VirtoCommerce.AzureSearchModule.Tests", "VirtoCommerce.AzureSearchModule.Tests\VirtoCommerce.AzureSearchModule.Tests.csproj", "{9B633C06-A88E-422A-BB8F-383A3A664483}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VirtoCommerce.AzureSearchModule.Data", "src\VirtoCommerce.AzureSearchModule.Data\VirtoCommerce.AzureSearchModule.Data.csproj", "{A578CCA0-1C40-46CC-8A05-F1FD660B1299}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VirtoCommerce.AzureSearchModule.Web", "src\VirtoCommerce.AzureSearchModule.Web\VirtoCommerce.AzureSearchModule.Web.csproj", "{4188FD14-2C72-4C29-A2A5-F97851548194}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VirtoCommerce.AzureSearchModule.Tests", "tests\VirtoCommerce.AzureSearchModule.Tests\VirtoCommerce.AzureSearchModule.Tests.csproj", "{8A76B67D-61F1-46AA-893E-A6E6C91B5D61}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,20 +19,28 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{8E31AF8C-5EFC-4795-B9FE-9229CD3FFA90}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8E31AF8C-5EFC-4795-B9FE-9229CD3FFA90}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{8E31AF8C-5EFC-4795-B9FE-9229CD3FFA90}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{8E31AF8C-5EFC-4795-B9FE-9229CD3FFA90}.Release|Any CPU.Build.0 = Release|Any CPU
-		{3349FD5E-374B-494B-981D-27032B4C066C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{3349FD5E-374B-494B-981D-27032B4C066C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{3349FD5E-374B-494B-981D-27032B4C066C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{3349FD5E-374B-494B-981D-27032B4C066C}.Release|Any CPU.Build.0 = Release|Any CPU
-		{9B633C06-A88E-422A-BB8F-383A3A664483}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{9B633C06-A88E-422A-BB8F-383A3A664483}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{9B633C06-A88E-422A-BB8F-383A3A664483}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{9B633C06-A88E-422A-BB8F-383A3A664483}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A578CCA0-1C40-46CC-8A05-F1FD660B1299}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A578CCA0-1C40-46CC-8A05-F1FD660B1299}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A578CCA0-1C40-46CC-8A05-F1FD660B1299}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A578CCA0-1C40-46CC-8A05-F1FD660B1299}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4188FD14-2C72-4C29-A2A5-F97851548194}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4188FD14-2C72-4C29-A2A5-F97851548194}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4188FD14-2C72-4C29-A2A5-F97851548194}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4188FD14-2C72-4C29-A2A5-F97851548194}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8A76B67D-61F1-46AA-893E-A6E6C91B5D61}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8A76B67D-61F1-46AA-893E-A6E6C91B5D61}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8A76B67D-61F1-46AA-893E-A6E6C91B5D61}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8A76B67D-61F1-46AA-893E-A6E6C91B5D61}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{A578CCA0-1C40-46CC-8A05-F1FD660B1299} = {485B4FBF-6A56-4E2F-AAF4-0C01E747811D}
+		{4188FD14-2C72-4C29-A2A5-F97851548194} = {485B4FBF-6A56-4E2F-AAF4-0C01E747811D}
+		{8A76B67D-61F1-46AA-893E-A6E6C91B5D61} = {127C1D4A-ECFB-4DDC-AAA3-7132C2D3D6BC}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {DBE5B9F8-CB70-4AD8-9979-77263AD4DD05}
 	EndGlobalSection
 EndGlobal
