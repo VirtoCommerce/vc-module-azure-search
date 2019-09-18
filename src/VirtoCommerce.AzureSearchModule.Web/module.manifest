@@ -2,7 +2,8 @@
 <module>
     <id>VirtoCommerce.AzureSearch</id>
     <version>3.0.0</version>
-    <platformVersion>3.0.0</platformVersion>
+    <version-tag>beta.1</version-tag>
+    <platformVersion>3.0.0</platformVersion>    
     <dependencies>
         <dependency id="VirtoCommerce.Search" version="3.0.0" />
     </dependencies>
