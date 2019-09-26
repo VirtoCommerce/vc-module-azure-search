@@ -15,15 +15,15 @@ namespace VirtoCommerce.AzureSearchModule.Data
 
             var result = new SearchResponse
             {
-                TotalCount = primaryResponse.Count ?? 0,
-                Documents = primaryResponse.Results.Select(ToSearchDocument).ToArray(),
+                TotalCount = primaryResponse?.Count ?? 0,
+                Documents = primaryResponse?.Results.Select(ToSearchDocument).ToArray(),
                 Aggregations = GetAggregations(searchResults, request)
             };
 
             return result;
         }
 
-        public static SearchDocument ToSearchDocument(SearchResult searchResult)
+        public static SearchDocument ToSearchDocument(SearchResult<Document> searchResult)
         {
             var result = new SearchDocument();
 
@@ -60,7 +60,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
             var facetResults = searchResults.Where(r => r.ProviderResponse.Facets != null).SelectMany(r => r.ProviderResponse.Facets).ToList();
             if (facetResults.Any())
             {
-                var facets = new FacetResults();
+                var facets = new Dictionary<string, IList<FacetResult>>();
                 foreach (var keyValuePair in facetResults)
                 {
                     facets[keyValuePair.Key] = keyValuePair.Value;
@@ -74,7 +74,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
             }
 
             // Add responses for aggregations with empty field name
-            foreach (var searchResult in searchResults.Where(r => !string.IsNullOrEmpty(r.AggregationId) && r.ProviderResponse.Count > 0))
+            foreach (var searchResult in searchResults.Where(r => !string.IsNullOrEmpty(r.AggregationId) && r.ProviderResponse?.Count > 0))
             {
                 result.Add(new AggregationResponse
                 {
@@ -84,7 +84,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
                             new AggregationResponseValue
                             {
                                 Id= searchResult.AggregationId,
-                                Count = searchResult.ProviderResponse.Count ?? 0,
+                                Count = searchResult.ProviderResponse?.Count ?? 0,
                             }
                         }
                 });
@@ -93,7 +93,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
             return result;
         }
 
-        private static AggregationResponse GetAggregation(AggregationRequest aggregationRequest, FacetResults facets)
+        private static AggregationResponse GetAggregation(AggregationRequest aggregationRequest, IDictionary<string, IList<FacetResult>> facets)
         {
             AggregationResponse result = null;
 
@@ -110,7 +110,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
             return result;
         }
 
-        private static AggregationResponse GetTermAggregation(TermAggregationRequest termAggregationRequest, FacetResults facets)
+        private static AggregationResponse GetTermAggregation(TermAggregationRequest termAggregationRequest, IDictionary<string, IList<FacetResult>> facets)
         {
             AggregationResponse result = null;
 
@@ -159,7 +159,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
             return result;
         }
 
-        private static AggregationResponse GetRangeAggregation(RangeAggregationRequest rangeAggregationRequest, FacetResults facets)
+        private static AggregationResponse GetRangeAggregation(RangeAggregationRequest rangeAggregationRequest, IDictionary<string, IList<FacetResult>> facets)
         {
             AggregationResponse result = null;
 

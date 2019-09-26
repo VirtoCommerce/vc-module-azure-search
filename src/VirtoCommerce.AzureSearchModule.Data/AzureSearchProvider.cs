@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Azure.Search;
@@ -229,7 +228,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
                 IsSortable = field.IsFilterable && !isCollection,
             };
 
-            if (providerField.IsSearchable)
+            if (providerField.IsSearchable.HasValue && providerField.IsSearchable.Value)
             {
                 providerField.IndexAnalyzer = ContentAnalyzerName;
                 providerField.SearchAnalyzer = AnalyzerName.StandardLucene;
@@ -344,7 +343,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
                         Tokenizer = TokenizerName.Standard,
                         TokenFilters = new[] { TokenFilterName.Lowercase, GetTokenFilterName() }
                     }
-                },
+                }
             };
 
             return index;
