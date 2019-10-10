@@ -13,16 +13,12 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VirtoCommerce.AzureSearchMo
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VirtoCommerce.AzureSearchModule.Tests", "tests\VirtoCommerce.AzureSearchModule.Tests\VirtoCommerce.AzureSearchModule.Tests.csproj", "{8A76B67D-61F1-46AA-893E-A6E6C91B5D61}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "_build", "build\_build.csproj", "{3B457AEE-BC99-4B1A-B0A0-9627C9D59156}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{3B457AEE-BC99-4B1A-B0A0-9627C9D59156}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{3B457AEE-BC99-4B1A-B0A0-9627C9D59156}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A578CCA0-1C40-46CC-8A05-F1FD660B1299}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{A578CCA0-1C40-46CC-8A05-F1FD660B1299}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A578CCA0-1C40-46CC-8A05-F1FD660B1299}.Release|Any CPU.ActiveCfg = Release|Any CPU
