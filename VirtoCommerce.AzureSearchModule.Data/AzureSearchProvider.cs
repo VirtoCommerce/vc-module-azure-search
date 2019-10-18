@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -338,7 +338,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
                     {
                         Name = ContentAnalyzerName,
                         Tokenizer = TokenizerName.Standard,
-                        TokenFilters = new[] { TokenFilterName.Lowercase, GetTokenFilterName() }
+                        TokenFilters = new[] { TokenFilterName.Lowercase, GetTokenFilterName(), TokenFilterName.AsciiFolding  }
                     }
                 },
             };
