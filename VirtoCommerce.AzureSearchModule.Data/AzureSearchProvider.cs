@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -225,7 +225,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
                 IsSortable = field.IsFilterable && !isCollection,
             };
 
-            if (providerField.IsSearchable)
+            if (providerField.IsSearchable == true)
             {
                 providerField.IndexAnalyzer = ContentAnalyzerName;
                 providerField.SearchAnalyzer = AnalyzerName.StandardLucene;
