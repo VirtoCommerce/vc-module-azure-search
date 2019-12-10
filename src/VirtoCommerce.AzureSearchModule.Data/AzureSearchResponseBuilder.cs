@@ -4,6 +4,7 @@ using System.Linq;
 using Microsoft.Azure.Search.Models;
 using VirtoCommerce.Platform.Core.Common;
 using VirtoCommerce.SearchModule.Core.Model;
+using FacetResults = System.Collections.Generic.IDictionary<string, System.Collections.Generic.IList<Microsoft.Azure.Search.Models.FacetResult>>;
 
 namespace VirtoCommerce.AzureSearchModule.Data
 {
@@ -23,7 +24,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
             return result;
         }
 
-        public static SearchDocument ToSearchDocument(SearchResult searchResult)
+        public static SearchDocument ToSearchDocument(SearchResult<Document> searchResult)
         {
             var result = new SearchDocument();
 
@@ -60,7 +61,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
             var facetResults = searchResults.Where(r => r.ProviderResponse.Facets != null).SelectMany(r => r.ProviderResponse.Facets).ToList();
             if (facetResults.Any())
             {
-                var facets = new FacetResults();
+                var facets = new Dictionary<string, IList<FacetResult>>();
                 foreach (var keyValuePair in facetResults)
                 {
                     facets[keyValuePair.Key] = keyValuePair.Value;

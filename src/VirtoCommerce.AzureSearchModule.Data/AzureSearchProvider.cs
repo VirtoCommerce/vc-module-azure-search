@@ -229,7 +229,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
                 IsSortable = field.IsFilterable && !isCollection,
             };
 
-            if (providerField.IsSearchable)
+            if (providerField.IsSearchable == true)
             {
                 providerField.IndexAnalyzer = ContentAnalyzerName;
                 providerField.SearchAnalyzer = AnalyzerName.StandardLucene;
