@@ -6,6 +6,6 @@ namespace VirtoCommerce.AzureSearchModule.Data
     public class AzureSearchResult
     {
         public string AggregationId { get; set; }
-        public DocumentSearchResult ProviderResponse { get; set; }
+        public DocumentSearchResult<Document> ProviderResponse { get; set; }
     }
 }
