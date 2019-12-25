@@ -12,6 +12,7 @@ using VirtoCommerce.SearchModule.Core.Exceptions;
 using VirtoCommerce.SearchModule.Core.Model;
 using VirtoCommerce.SearchModule.Core.Services;
 using DataType = Microsoft.Azure.Search.Models.DataType;
+using Index = Microsoft.Azure.Search.Models.Index;
 using IndexingResult = VirtoCommerce.SearchModule.Core.Model.IndexingResult;
 
 namespace VirtoCommerce.AzureSearchModule.Data
