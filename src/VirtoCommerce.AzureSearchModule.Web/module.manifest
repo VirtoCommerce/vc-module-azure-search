@@ -22,7 +22,7 @@
     <projectUrl>https://virtocommerce.com/apps/extensions/virto-azure-search-module</projectUrl>
     <iconUrl>https://github.com/VirtoCommerce/vc-module-azure-search/raw/dev/VirtoCommerce.AzureSearchModule.Web/Content/logo.png</iconUrl>
     <releaseNotes>Third version.</releaseNotes>
-    <copyright>Copyright © 2019 Virto Commerce. All rights reserved</copyright>
+    <copyright>Copyright © 2020 Virto Commerce. All rights reserved</copyright>
     <tags>azure search</tags>
 
     <assemblyFile>VirtoCommerce.AzureSearchModule.Web.dll</assemblyFile>
