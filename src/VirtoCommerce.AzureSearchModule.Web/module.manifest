@@ -1,30 +1,28 @@
-<?xml version="1.0" encoding="utf-8" ?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <module>
-    <id>VirtoCommerce.AzureSearch</id>
-    <version>3.0.0</version>
-    <version-tag>rc.4</version-tag>
-    <platformVersion>3.0.0</platformVersion>    
-    <dependencies>
-        <dependency id="VirtoCommerce.Search" version="3.0.0" />
-    </dependencies>
-
-    <title>Azure Search module</title>
-    <description>Indexed search functionality with AzureSearch engine</description>
-    <authors>
-        <author>Artem Dudarev</author>
-    </authors>
-    <owners>
-        <owner>Virto Commerce</owner>
-    </owners>
-	<groups>
-        <group>commerce</group>
-    </groups>
-    <projectUrl>https://virtocommerce.com/apps/extensions/virto-azure-search-module</projectUrl>
-    <iconUrl>https://github.com/VirtoCommerce/vc-module-azure-search/raw/dev/VirtoCommerce.AzureSearchModule.Web/Content/logo.png</iconUrl>
-    <releaseNotes>Third version.</releaseNotes>
-    <copyright>Copyright © 2020 Virto Commerce. All rights reserved</copyright>
-    <tags>azure search</tags>
-
-    <assemblyFile>VirtoCommerce.AzureSearchModule.Web.dll</assemblyFile>
-    <moduleType>VirtoCommerce.AzureSearchModule.Web.Module, VirtoCommerce.AzureSearchModule.Web</moduleType>
+  <id>VirtoCommerce.AzureSearch</id>
+  <version>3.0.0</version>
+  <version-tag>rc.5$</version-tag>
+  <platformVersion>3.0.0</platformVersion>
+  <dependencies>
+    <dependency id="VirtoCommerce.Search" version="3.0.0" />
+  </dependencies>
+  <title>Azure Search module</title>
+  <description>Indexed search functionality with AzureSearch engine</description>
+  <authors>
+    <author>Artem Dudarev</author>
+  </authors>
+  <owners>
+    <owner>Virto Commerce</owner>
+  </owners>
+  <groups>
+    <group>commerce</group>
+  </groups>
+  <projectUrl>https://virtocommerce.com/apps/extensions/virto-azure-search-module</projectUrl>
+  <iconUrl>https://github.com/VirtoCommerce/vc-module-azure-search/raw/dev/VirtoCommerce.AzureSearchModule.Web/Content/logo.png</iconUrl>
+  <releaseNotes>Third version.</releaseNotes>
+  <copyright>Copyright В© 2020 Virto Commerce. All rights reserved</copyright>
+  <tags>azure search</tags>
+  <assemblyFile>VirtoCommerce.AzureSearchModule.Web.dll</assemblyFile>
+  <moduleType>VirtoCommerce.AzureSearchModule.Web.Module, VirtoCommerce.AzureSearchModule.Web</moduleType>
 </module>
