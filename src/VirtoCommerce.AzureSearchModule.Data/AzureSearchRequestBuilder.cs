@@ -411,7 +411,8 @@ namespace VirtoCommerce.AzureSearchModule.Data
 
                 if (termAggregationRequest.Size != null)
                 {
-                    builder.AppendFormat(CultureInfo.InvariantCulture, ",count:{0}", termAggregationRequest.Size);
+                    var size = termAggregationRequest.Size == 0 ? int.MaxValue : termAggregationRequest.Size;
+                    builder.AppendFormat(CultureInfo.InvariantCulture, ",count:{0}", size);
                 }
 
                 result = builder.ToString();
