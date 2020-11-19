@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Azure.Search;
 using Microsoft.Azure.Search.Models;
 using Microsoft.Extensions.Options;
 using Microsoft.Rest.Azure;
+using VirtoCommerce.Platform.Core.Common;
 using VirtoCommerce.Platform.Core.Settings;
 using VirtoCommerce.SearchModule.Core.Exceptions;
 using VirtoCommerce.SearchModule.Core.Model;
@@ -176,15 +176,22 @@ namespace VirtoCommerce.AzureSearchModule.Data
                     newValues.AddRange(field.Values);
                     result[fieldName] = newValues.ToArray();
                 }
+                //else if (field.Name == "__object")
+                //{
+                //    result.Add(fieldName, field.Value);
+                //}
                 else
                 {
                     var providerField = AddProviderField(documentType, providerFields, fieldName, field);
                     var isCollection = providerField.Type.ToString().StartsWith("Collection(");
 
-                    var point = field.Value as GeoPoint;
-                    var value = point != null
-                        ? (isCollection ? field.Values.Select(v => ((GeoPoint)v).ToDocumentValue()).ToArray() : point.ToDocumentValue())
-                        : (isCollection ? field.Values : field.Value);
+                    var value = (field.Value, isCollection) switch
+                    {
+                        (GeoPoint pnt, true) => field.Values.Select(v => ((GeoPoint)v).ToDocumentValue()).ToArray(),
+                        (GeoPoint pnt, false) => pnt.ToDocumentValue(),
+                        (_, true) => field.Values,
+                        (_, false) => field.Value
+                    };
 
                     result.Add(fieldName, value);
                 }
@@ -210,6 +217,13 @@ namespace VirtoCommerce.AzureSearchModule.Data
         {
             var originalFieldType = field.Value?.GetType() ?? typeof(object);
             var providerFieldType = GetProviderFieldType(documentType, fieldName, originalFieldType);
+
+            if (providerFieldType == DataType.Complex)
+            {
+                var subFields = new AzureSearchFieldBuilder(ContentAnalyzerName).BuildFields(originalFieldType);
+
+                return new Field(fieldName, providerFieldType, subFields);
+            }
 
             var isGeoPoint = providerFieldType == DataType.GeographyPoint;
             var isString = providerFieldType == DataType.String;
@@ -255,6 +269,8 @@ namespace VirtoCommerce.AzureSearchModule.Data
                 return DataType.DateTimeOffset;
             if (fieldType == typeof(GeoPoint))
                 return DataType.GeographyPoint;
+            if (typeof(IEntity).IsAssignableFrom(fieldType))
+                return DataType.Complex;
 
             throw new ArgumentException($"Field {fieldName} has unsupported type {fieldType}", nameof(fieldType));
         }
@@ -366,23 +382,20 @@ namespace VirtoCommerce.AzureSearchModule.Data
             return _settingsManager.GetValue("VirtoCommerce.Search.AzureSearch.NGramTokenFilter.MaxGram", 20);
         }
 
-        #endregion
+        #endregion Create and configure index
 
         #region Mapping
 
         protected virtual async Task<IList<Field>> GetMappingAsync(string indexName)
         {
             var providerFields = GetMappingFromCache(indexName);
-            if (providerFields == null)
+            if (providerFields == null && await IndexExistsAsync(indexName))
             {
-                if (await IndexExistsAsync(indexName))
-                {
-                    var index = await Client.Indexes.GetAsync(indexName);
-                    providerFields = index.Fields;
-                }
+                var index = await Client.Indexes.GetAsync(indexName);
+                providerFields = index.Fields;
             }
 
-            providerFields = providerFields ?? new List<Field>();
+            providerFields ??= new List<Field>();
             AddMappingToCache(indexName, providerFields);
 
             return providerFields;
@@ -411,7 +424,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
             _mappings.Remove(indexName);
         }
 
-        #endregion
+        #endregion Mapping
 
         protected virtual void ThrowException(string message, Exception innerException)
         {
