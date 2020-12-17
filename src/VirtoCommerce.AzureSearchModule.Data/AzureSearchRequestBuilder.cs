@@ -14,7 +14,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
         {
             var result = new List<AzureSearchRequest>();
 
-            // Create additional requests for each aggregation with fillter which differs from main request filter or with empty field name.
+            // Create additional requests for each aggregation with filter which differs from main request filter or with empty field name.
 
             var searchText = GetSearchText(request);
             var primaryFilter = GetFilters(request, availableFields);
@@ -126,6 +126,11 @@ namespace VirtoCommerce.AzureSearchModule.Data
                     : AzureSearchHelper.GetGeoDistanceExpression(availableField.Name, geoSorting.Location);
 
                 result = string.Join(" ", fieldName, sortingField.IsDescending ? "desc" : "asc");
+            }
+            else if (sortingField.FieldName == "score")
+            {
+                result = string.Join(" ", "search.score()", sortingField.IsDescending ? "desc" : "asc");
+                
             }
 
             return result;
