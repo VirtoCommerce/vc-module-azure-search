@@ -9,18 +9,18 @@ using VirtoCommerce.SearchModule.Core.Services;
 
 namespace VirtoCommerce.AzureSearchModule.Web
 {
-    public class Module : IModule
+    public class Module : IModule, IHasConfiguration
     {
         public ManifestModuleInfo ModuleInfo { get; set; }
+        public IConfiguration Configuration { get; set; }
 
         public void Initialize(IServiceCollection serviceCollection)
         {
-            var configuration = serviceCollection.BuildServiceProvider().GetService<IConfiguration>();
-            var provider = configuration.GetValue<string>("Search:Provider");
+            var provider = Configuration.GetValue<string>("Search:Provider");
 
             if (provider.EqualsInvariant("AzureSearch"))
             {
-                serviceCollection.Configure<AzureSearchOptions>(configuration.GetSection("Search:AzureSearch"));
+                serviceCollection.Configure<AzureSearchOptions>(Configuration.GetSection("Search:AzureSearch"));
                 serviceCollection.AddSingleton<ISearchProvider, AzureSearchProvider>();
             }
         }
