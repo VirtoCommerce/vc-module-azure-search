@@ -1,6 +1,6 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Azure.Search;
@@ -26,7 +26,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
         private readonly AzureSearchOptions _azureSearchOptions;
         private readonly SearchOptions _searchOptions;
         private readonly ISettingsManager _settingsManager;
-        private readonly Dictionary<string, IList<Field>> _mappings = new Dictionary<string, IList<Field>>();
+        private readonly ConcurrentDictionary<string, IList<Field>> _mappings = new ConcurrentDictionary<string, IList<Field>>();
 
         public AzureSearchProvider(IOptions<AzureSearchOptions> azureSearchOptions, IOptions<SearchOptions> searchOptions, ISettingsManager settingsManager)
         {
@@ -43,7 +43,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
         }
 
         private SearchServiceClient _client;
-        protected SearchServiceClient Client => _client ?? (_client = CreateSearchServiceClient());
+        protected SearchServiceClient Client => _client ??= CreateSearchServiceClient();
 
         public virtual async Task DeleteIndexAsync(string documentType)
         {
@@ -315,6 +315,12 @@ namespace VirtoCommerce.AzureSearchModule.Data
             return Client.Indexes.ExistsAsync(indexName);
         }
 
+        protected virtual async Task<IList<Field>> GetIndexFields(string indexName)
+        {
+            var index = await Client.Indexes.GetAsync(indexName);
+            return index.Fields;
+        }
+
         #region Create and configure index
 
         protected virtual Task CreateIndex(string indexName, IList<Field> providerFields)
@@ -373,16 +379,12 @@ namespace VirtoCommerce.AzureSearchModule.Data
         protected virtual async Task<IList<Field>> GetMappingAsync(string indexName)
         {
             var providerFields = GetMappingFromCache(indexName);
-            if (providerFields == null)
+            if (providerFields == null && await IndexExistsAsync(indexName))
             {
-                if (await IndexExistsAsync(indexName))
-                {
-                    var index = await Client.Indexes.GetAsync(indexName);
-                    providerFields = index.Fields;
-                }
+                providerFields = await GetIndexFields(indexName);
             }
 
-            providerFields = providerFields ?? new List<Field>();
+            providerFields ??= new List<Field>();
             AddMappingToCache(indexName, providerFields);
 
             return providerFields;
@@ -408,7 +410,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
 
         protected virtual void RemoveMappingFromCache(string indexName)
         {
-            _mappings.Remove(indexName);
+            _mappings.TryRemove(indexName, out _);
         }
 
         #endregion
