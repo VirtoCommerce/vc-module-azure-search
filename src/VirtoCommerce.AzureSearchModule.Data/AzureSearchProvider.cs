@@ -182,22 +182,9 @@ namespace VirtoCommerce.AzureSearchModule.Data
                     var isCollection = providerField.Type.ToString().StartsWith("Collection(");
 
                     var point = field.Value as GeoPoint;
-                    object value;
-                    if (point != null)
-                    {
-                        if (isCollection)
-                            value = field.Values.Select(v => ((GeoPoint)v).ToDocumentValue()).ToArray();
-                        else
-                            value = point.ToDocumentValue();
-                    }
-                    else
-                    {
-                        if (isCollection)
-                            value = field.Values;
-                        else
-                            value = field.Value;
-
-                    }
+                    var value = point != null
+                        ? (isCollection ? field.Values.Select(v => ((GeoPoint)v).ToDocumentValue()).ToArray() : point.ToDocumentValue())
+                        : (isCollection ? field.Values : field.Value);
 
                     result.Add(fieldName, value);
                 }
