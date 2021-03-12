@@ -315,6 +315,12 @@ namespace VirtoCommerce.AzureSearchModule.Data
             return Client.Indexes.ExistsAsync(indexName);
         }
 
+        protected virtual async Task<IList<Field>> GetIndexFields(string indexName)
+        {
+            var index = await Client.Indexes.GetAsync(indexName);
+            return index.Fields;
+        }
+
         #region Create and configure index
 
         protected virtual Task CreateIndex(string indexName, IList<Field> providerFields)
@@ -375,8 +381,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
             var providerFields = GetMappingFromCache(indexName);
             if (providerFields == null && await IndexExistsAsync(indexName))
             {
-                var index = await Client.Indexes.GetAsync(indexName);
-                providerFields = index.Fields;
+                providerFields = await GetIndexFields(indexName);
             }
 
             providerFields ??= new List<Field>();
