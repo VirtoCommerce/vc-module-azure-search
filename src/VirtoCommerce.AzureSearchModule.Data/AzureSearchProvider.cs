@@ -288,6 +288,15 @@ namespace VirtoCommerce.AzureSearchModule.Data
                     // Need to wait some time until new mapping is applied
                     await Task.Delay(1000);
                 }
+                catch (CloudException cloudException)
+                {
+                    var documentIds = string.Join(',', providerDocuments.Select(x => x.Id));
+
+                    var error = WrapCloudExceptionMessage(cloudException);
+                    error = $"{error}; DocumentIds:{documentIds}";
+
+                    throw new SearchException(error, cloudException);
+                }
             }
 
             return result;
@@ -335,7 +344,10 @@ namespace VirtoCommerce.AzureSearchModule.Data
             }
             catch (CloudException cloudException)
             {
+                var fieldNames = GetFieldNames(providerFields);
                 var error = WrapCloudExceptionMessage(cloudException);
+                error = $"{error}; FieldNames:{fieldNames}";
+
                 throw new SearchException(error, cloudException);
             }
         }
@@ -413,7 +425,10 @@ namespace VirtoCommerce.AzureSearchModule.Data
             }
             catch (CloudException cloudException)
             {
+                var fieldNames = GetFieldNames(providerFields);
                 var error = WrapCloudExceptionMessage(cloudException);
+                error = $"{error}; FieldNames:{fieldNames}";
+
                 throw new SearchException(error, cloudException);
             }
         }
@@ -462,7 +477,12 @@ namespace VirtoCommerce.AzureSearchModule.Data
                 return $"StatusCode: {exception?.Response?.StatusCode}; Content:{unescapedContent}";
             }
 
-            return $"Error content is empty; CloudException message:{exception}";
+            return exception.ToString();
+        }
+
+        private string GetFieldNames(IList<Field> providerFields)
+        {
+            return string.Join(',', providerFields.Select(x => x.Name));
         }
     }
 }
