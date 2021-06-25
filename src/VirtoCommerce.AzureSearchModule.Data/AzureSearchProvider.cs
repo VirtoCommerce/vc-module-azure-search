@@ -89,11 +89,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
                 }
                 catch (CloudException cloudException)
                 {
-                    var fieldNames = GetFieldNames(providerFields);
-                    var error = WrapCloudExceptionMessage(cloudException);
-                    error = $"{error}; FieldNames:{fieldNames}";
-
-                    throw new SearchException(error, cloudException);
+                    ThrowExeption(cloudException, providerFields: providerFields);
                 }
             }
 
@@ -301,12 +297,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
                 }
                 catch (CloudException cloudException)
                 {
-                    var documentIds = string.Join(',', providerDocuments.Select(x => x.Id));
-
-                    var error = WrapCloudExceptionMessage(cloudException);
-                    error = $"{error}; DocumentIds:{documentIds}";
-
-                    throw new SearchException(error, cloudException);
+                    ThrowExeption(cloudException, providerDocuments: providerDocuments);
                 }
             }
 
@@ -420,15 +411,10 @@ namespace VirtoCommerce.AzureSearchModule.Data
             {
                 var updatedIndex = Client.Indexes.CreateOrUpdate(indexName, index);
                 AddMappingToCache(indexName, updatedIndex.Fields);
-
             }
             catch (CloudException cloudException)
             {
-                var fieldNames = GetFieldNames(providerFields);
-                var error = WrapCloudExceptionMessage(cloudException);
-                error = $"{error}; FieldNames:{fieldNames}";
-
-                throw new SearchException(error, cloudException);
+                ThrowExeption(cloudException, providerFields: providerFields);
             }
         }
 
@@ -452,6 +438,25 @@ namespace VirtoCommerce.AzureSearchModule.Data
         protected virtual void ThrowException(string message, Exception innerException)
         {
             throw new SearchException($"{message}. Search service name: {_azureSearchOptions.SearchServiceName}, Scope: {_searchOptions.Scope}", innerException);
+        }
+
+        private void ThrowExeption(CloudException cloudException, IList<Field> providerFields = null, IEnumerable<SearchDocument> providerDocuments = null)
+        {
+            var error = WrapCloudExceptionMessage(cloudException);
+
+            if (providerDocuments != null)
+            {
+                var documentIds = string.Join(',', providerDocuments.Select(x => x.Id));
+                error = $"{error}; DocumentIds:{documentIds}";
+            }
+
+            if (providerFields != null)
+            {
+                var fieldNames = GetFieldNames(providerFields);
+                error = $"{error}; FieldNames:{fieldNames}";
+            }
+
+            throw new SearchException(error, cloudException);
         }
 
         protected virtual SearchServiceClient CreateSearchServiceClient()
