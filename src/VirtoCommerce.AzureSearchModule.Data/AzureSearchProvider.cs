@@ -83,7 +83,18 @@ namespace VirtoCommerce.AzureSearchModule.Data
 
             if (!indexExits)
             {
-                await CreateIndex(indexName, providerFields);
+                try
+                {
+                    await CreateIndex(indexName, providerFields);
+                }
+                catch (CloudException cloudException)
+                {
+                    var fieldNames = GetFieldNames(providerFields);
+                    var error = WrapCloudExceptionMessage(cloudException);
+                    error = $"{error}; FieldNames:{fieldNames}";
+
+                    throw new SearchException(error, cloudException);
+                }
             }
 
             if (updateMapping)
@@ -337,19 +348,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
         protected virtual Task CreateIndex(string indexName, IList<Field> providerFields)
         {
             var index = CreateIndexDefinition(indexName, providerFields);
-
-            try
-            {
-                return Client.Indexes.CreateAsync(index);
-            }
-            catch (CloudException cloudException)
-            {
-                var fieldNames = GetFieldNames(providerFields);
-                var error = WrapCloudExceptionMessage(cloudException);
-                error = $"{error}; FieldNames:{fieldNames}";
-
-                throw new SearchException(error, cloudException);
-            }
+            return Client.Indexes.CreateAsync(index);
         }
 
         protected virtual Index CreateIndexDefinition(string indexName, IList<Field> providerFields)
