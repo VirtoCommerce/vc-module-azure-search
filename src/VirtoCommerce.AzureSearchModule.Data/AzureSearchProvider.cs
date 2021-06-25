@@ -2,11 +2,13 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.Azure.Search;
 using Microsoft.Azure.Search.Models;
 using Microsoft.Extensions.Options;
 using Microsoft.Rest.Azure;
+using VirtoCommerce.Platform.Core.Common;
 using VirtoCommerce.Platform.Core.Settings;
 using VirtoCommerce.SearchModule.Core.Exceptions;
 using VirtoCommerce.SearchModule.Core.Model;
@@ -286,6 +288,15 @@ namespace VirtoCommerce.AzureSearchModule.Data
                     // Need to wait some time until new mapping is applied
                     await Task.Delay(1000);
                 }
+                catch (CloudException cloudException)
+                {
+                    var documentIds = string.Join(',', providerDocuments.Select(x => x.Id));
+
+                    var error = WrapCloudExceptionMessage(cloudException);
+                    error = $"{error}; DocumentIds:{documentIds}";
+
+                    throw new SearchException(error, cloudException);
+                }
             }
 
             return result;
@@ -326,7 +337,19 @@ namespace VirtoCommerce.AzureSearchModule.Data
         protected virtual Task CreateIndex(string indexName, IList<Field> providerFields)
         {
             var index = CreateIndexDefinition(indexName, providerFields);
-            return Client.Indexes.CreateAsync(index);
+
+            try
+            {
+                return Client.Indexes.CreateAsync(index);
+            }
+            catch (CloudException cloudException)
+            {
+                var fieldNames = GetFieldNames(providerFields);
+                var error = WrapCloudExceptionMessage(cloudException);
+                error = $"{error}; FieldNames:{fieldNames}";
+
+                throw new SearchException(error, cloudException);
+            }
         }
 
         protected virtual Index CreateIndexDefinition(string indexName, IList<Field> providerFields)
@@ -393,9 +416,21 @@ namespace VirtoCommerce.AzureSearchModule.Data
         protected virtual void UpdateMapping(string indexName, IList<Field> providerFields)
         {
             var index = CreateIndexDefinition(indexName, providerFields);
-            var updatedIndex = Client.Indexes.CreateOrUpdate(indexName, index);
 
-            AddMappingToCache(indexName, updatedIndex.Fields);
+            try
+            {
+                var updatedIndex = Client.Indexes.CreateOrUpdate(indexName, index);
+                AddMappingToCache(indexName, updatedIndex.Fields);
+
+            }
+            catch (CloudException cloudException)
+            {
+                var fieldNames = GetFieldNames(providerFields);
+                var error = WrapCloudExceptionMessage(cloudException);
+                error = $"{error}; FieldNames:{fieldNames}";
+
+                throw new SearchException(error, cloudException);
+            }
         }
 
         protected virtual IList<Field> GetMappingFromCache(string indexName)
@@ -429,6 +464,25 @@ namespace VirtoCommerce.AzureSearchModule.Data
         protected virtual ISearchIndexClient GetSearchIndexClient(string indexName)
         {
             return Client.Indexes.GetClient(indexName);
+        }
+
+        /// <summary>
+        /// Construct exception message since CloudException.Message doesn't contain details (sometimes)
+        /// </summary>
+        protected virtual string WrapCloudExceptionMessage(CloudException exception)
+        {
+            if (exception.Response?.Content?.IsNullOrEmpty() == false)
+            {
+                var unescapedContent = Regex.Unescape(exception?.Response?.Content);
+                return $"StatusCode: {exception?.Response?.StatusCode}; Content:{unescapedContent}";
+            }
+
+            return exception.ToString();
+        }
+
+        private string GetFieldNames(IList<Field> providerFields)
+        {
+            return string.Join(',', providerFields.Select(x => x.Name));
         }
     }
 }
