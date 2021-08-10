@@ -217,8 +217,16 @@ namespace VirtoCommerce.AzureSearchModule.Data
 
         protected virtual Field CreateProviderField(string documentType, string fieldName, IndexDocumentField field)
         {
-            var originalFieldType = field.Value?.GetType() ?? typeof(object);
-            var providerFieldType = GetProviderFieldType(documentType, fieldName, originalFieldType);
+            DataType providerFieldType;
+            if (field.ValueType == IndexDocumentFieldValueType.Undefined)
+            {
+                var originalFieldType = field.Value?.GetType() ?? typeof(object);
+                providerFieldType = GetProviderFieldType(documentType, fieldName, originalFieldType);
+            }
+            else
+            {
+                providerFieldType = GetProviderFieldType(documentType, fieldName, field.ValueType);
+            }
 
             var isGeoPoint = providerFieldType == DataType.GeographyPoint;
             var isString = providerFieldType == DataType.String;
@@ -248,6 +256,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
             return providerField;
         }
 
+        [Obsolete("Left for backwards compatability.")]
         protected virtual DataType GetProviderFieldType(string documentType, string fieldName, Type fieldType)
         {
             if (fieldType == typeof(string))
@@ -267,6 +276,33 @@ namespace VirtoCommerce.AzureSearchModule.Data
 
             throw new ArgumentException($"Field {fieldName} has unsupported type {fieldType}", nameof(fieldType));
         }
+
+        protected virtual DataType GetProviderFieldType(string documentType, string fieldName, IndexDocumentFieldValueType fieldType)
+        {
+            switch (fieldType)
+            {
+                case IndexDocumentFieldValueType.Char:
+                case IndexDocumentFieldValueType.String:
+                    return DataType.String;
+                case IndexDocumentFieldValueType.Byte:
+                case IndexDocumentFieldValueType.Short:
+                case IndexDocumentFieldValueType.Integer:
+                    return DataType.Int32;
+                case IndexDocumentFieldValueType.Long:
+                    return DataType.Int64;
+                case IndexDocumentFieldValueType.Double:
+                    return DataType.Double;
+                case IndexDocumentFieldValueType.Boolean:
+                    return DataType.Boolean;
+                case IndexDocumentFieldValueType.DateTime:
+                    return DataType.DateTimeOffset;
+                case IndexDocumentFieldValueType.GeoPoint:
+                    return DataType.GeographyPoint;
+                default:
+                    throw new ArgumentException($"Field {fieldName} has unsupported type {fieldType}", nameof(fieldType));
+            }
+        }
+
 
         protected virtual async Task<IndexingResult> IndexWithRetryAsync(string indexName, IEnumerable<SearchDocument> providerDocuments, int retryCount)
         {
