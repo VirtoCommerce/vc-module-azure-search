@@ -1,5 +1,5 @@
 {
-    "artifactKey": "VirtoCommerce.AzureSearchModule",
+    "artifactKey": "VirtoCommerce.AzureSearch",
     "deployRepo": "vc-deploy-dev",
     "dev": {
         "deployAppName": "vcplatform-dev",
