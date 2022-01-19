@@ -1,9 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <module xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
   <id>VirtoCommerce.AzureSearch</id>
-  <version>3.11.0</version>
+  <version>3.200.0</version>
   <version-tag />
-  <platformVersion>3.57.0</platformVersion>
+  <platformVersion>3.200.0</platformVersion>
   <title>Azure Search module</title>
   <description>Indexed search functionality with AzureSearch engine</description>
   <authors>
@@ -21,7 +21,7 @@
   <assemblyFile>VirtoCommerce.AzureSearchModule.Web.dll</assemblyFile>
   <moduleType>VirtoCommerce.AzureSearchModule.Web.Module, VirtoCommerce.AzureSearchModule.Web</moduleType>
   <dependencies>
-    <dependency id="VirtoCommerce.Search" version="3.15.0" />
+    <dependency id="VirtoCommerce.Search" version="3.200.0" />
   </dependencies>
   <groups>
     <group>commerce</group>
