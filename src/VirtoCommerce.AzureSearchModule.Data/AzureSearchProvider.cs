@@ -161,7 +161,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
 
         public Task SwapIndexAsync(string documentType)
         {
-            return Task.CompletedTask;
+            throw new NotImplementedException("Index swapping is not supported in this Search Provider.");
         }
 
         protected virtual SearchDocument ConvertToProviderDocument(IndexDocument document, IList<Field> providerFields, string documentType)
