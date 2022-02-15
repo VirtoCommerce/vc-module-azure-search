@@ -47,6 +47,8 @@ namespace VirtoCommerce.AzureSearchModule.Data
         private SearchServiceClient _client;
         protected SearchServiceClient Client => _client ??= CreateSearchServiceClient();
 
+        public bool IsIndexSwappingSupported => false;
+
         public virtual async Task DeleteIndexAsync(string documentType)
         {
             if (string.IsNullOrEmpty(documentType))
@@ -69,7 +71,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
             }
         }
 
-        public virtual async Task<IndexingResult> IndexAsync(string documentType, IList<IndexDocument> documents, bool update = false)
+        public virtual async Task<IndexingResult> IndexAsync(string documentType, IList<IndexDocument> documents, bool partialUpdate = false, bool reindex = false)
         {
             var indexName = GetIndexName(documentType);
 
@@ -78,7 +80,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
 
             var providerDocuments = documents.Select(document => ConvertToProviderDocument(document, providerFields, documentType)).ToList();
 
-            var updateMapping = !update && providerFields.Count != oldFieldsCount;
+            var updateMapping = !partialUpdate && providerFields.Count != oldFieldsCount;
             
             var indexExits = await IndexExistsAsync(indexName);
 
@@ -99,7 +101,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
                 UpdateMapping(indexName, providerFields);
             }
 
-            var result = await IndexWithRetryAsync(indexName, providerDocuments, 10, update);
+            var result = await IndexWithRetryAsync(indexName, providerDocuments, 10, partialUpdate);
             return result;
         }
 
@@ -156,6 +158,11 @@ namespace VirtoCommerce.AzureSearchModule.Data
             {
                 throw new SearchException(ex.Message, ex);
             }
+        }
+
+        public Task SwapIndexAsync(string documentType)
+        {
+            throw new NotImplementedException("Index swapping is not supported in this Search Provider.");
         }
 
         protected virtual SearchDocument ConvertToProviderDocument(IndexDocument document, IList<Field> providerFields, string documentType)
@@ -305,11 +312,11 @@ namespace VirtoCommerce.AzureSearchModule.Data
         }
 
 
-        protected virtual async Task<IndexingResult> IndexWithRetryAsync(string indexName, IEnumerable<SearchDocument> providerDocuments, int retryCount, bool update)
+        protected virtual async Task<IndexingResult> IndexWithRetryAsync(string indexName, IEnumerable<SearchDocument> providerDocuments, int retryCount, bool partialUpdate)
         {
             IndexingResult result = null;
 
-            var batch = update ? IndexBatch.MergeOrUpload(providerDocuments) : IndexBatch.Upload(providerDocuments);
+            var batch = partialUpdate ? IndexBatch.MergeOrUpload(providerDocuments) : IndexBatch.Upload(providerDocuments);
             var indexClient = GetSearchIndexClient(indexName);
 
             // Retry if cannot index documents after updating the mapping
