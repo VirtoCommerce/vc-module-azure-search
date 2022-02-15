@@ -69,7 +69,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
             }
         }
 
-        public virtual async Task<IndexingResult> IndexAsync(string documentType, IList<IndexDocument> documents)
+        public virtual async Task<IndexingResult> IndexAsync(string documentType, IList<IndexDocument> documents, bool update = false)
         {
             var indexName = GetIndexName(documentType);
 
@@ -78,7 +78,8 @@ namespace VirtoCommerce.AzureSearchModule.Data
 
             var providerDocuments = documents.Select(document => ConvertToProviderDocument(document, providerFields, documentType)).ToList();
 
-            var updateMapping = providerFields.Count != oldFieldsCount;
+            var updateMapping = !update && providerFields.Count != oldFieldsCount;
+            
             var indexExits = await IndexExistsAsync(indexName);
 
             if (!indexExits)
@@ -98,7 +99,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
                 UpdateMapping(indexName, providerFields);
             }
 
-            var result = await IndexWithRetryAsync(indexName, providerDocuments, 10);
+            var result = await IndexWithRetryAsync(indexName, providerDocuments, 10, update);
             return result;
         }
 
@@ -304,11 +305,11 @@ namespace VirtoCommerce.AzureSearchModule.Data
         }
 
 
-        protected virtual async Task<IndexingResult> IndexWithRetryAsync(string indexName, IEnumerable<SearchDocument> providerDocuments, int retryCount)
+        protected virtual async Task<IndexingResult> IndexWithRetryAsync(string indexName, IEnumerable<SearchDocument> providerDocuments, int retryCount, bool update)
         {
             IndexingResult result = null;
 
-            var batch = IndexBatch.Upload(providerDocuments);
+            var batch = update ? IndexBatch.MergeOrUpload(providerDocuments) : IndexBatch.Upload(providerDocuments);
             var indexClient = GetSearchIndexClient(indexName);
 
             // Retry if cannot index documents after updating the mapping
