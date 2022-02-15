@@ -47,6 +47,8 @@ namespace VirtoCommerce.AzureSearchModule.Data
         private SearchServiceClient _client;
         protected SearchServiceClient Client => _client ??= CreateSearchServiceClient();
 
+        public bool IsIndexSwappingSupported => false;
+
         public virtual async Task DeleteIndexAsync(string documentType)
         {
             if (string.IsNullOrEmpty(documentType))
@@ -69,7 +71,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
             }
         }
 
-        public virtual async Task<IndexingResult> IndexAsync(string documentType, IList<IndexDocument> documents)
+        public virtual async Task<IndexingResult> IndexAsync(string documentType, IList<IndexDocument> documents, bool reindex = false)
         {
             var indexName = GetIndexName(documentType);
 
@@ -155,6 +157,11 @@ namespace VirtoCommerce.AzureSearchModule.Data
             {
                 throw new SearchException(ex.Message, ex);
             }
+        }
+
+        public Task SwapIndexAsync(string documentType)
+        {
+            throw new NotImplementedException("Index swapping is not supported in this Search Provider.");
         }
 
         protected virtual SearchDocument ConvertToProviderDocument(IndexDocument document, IList<Field> providerFields, string documentType)
