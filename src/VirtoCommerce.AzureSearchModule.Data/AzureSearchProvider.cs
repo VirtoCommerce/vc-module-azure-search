@@ -15,6 +15,7 @@ using VirtoCommerce.SearchModule.Core.Model;
 using VirtoCommerce.SearchModule.Core.Services;
 using DataType = Microsoft.Azure.Search.Models.DataType;
 using Index = Microsoft.Azure.Search.Models.Index;
+using IndexingParameters = VirtoCommerce.SearchModule.Core.Model.IndexingParameters;
 using IndexingResult = VirtoCommerce.SearchModule.Core.Model.IndexingResult;
 
 namespace VirtoCommerce.AzureSearchModule.Data
@@ -71,7 +72,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
             }
         }
 
-        public virtual async Task<IndexingResult> IndexAsync(string documentType, IList<IndexDocument> documents, bool partialUpdate = false, bool reindex = false)
+        public virtual async Task<IndexingResult> IndexAsync(string documentType, IList<IndexDocument> documents, IndexingParameters parameters)
         {
             var indexName = GetIndexName(documentType);
 
@@ -80,7 +81,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
 
             var providerDocuments = documents.Select(document => ConvertToProviderDocument(document, providerFields, documentType)).ToList();
 
-            var updateMapping = !partialUpdate && providerFields.Count != oldFieldsCount;
+            var updateMapping = !parameters.PartialUpdate && providerFields.Count != oldFieldsCount;
             
             var indexExits = await IndexExistsAsync(indexName);
 
@@ -101,7 +102,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
                 UpdateMapping(indexName, providerFields);
             }
 
-            var result = await IndexWithRetryAsync(indexName, providerDocuments, 10, partialUpdate);
+            var result = await IndexWithRetryAsync(indexName, providerDocuments, 10, parameters.PartialUpdate);
             return result;
         }
 
