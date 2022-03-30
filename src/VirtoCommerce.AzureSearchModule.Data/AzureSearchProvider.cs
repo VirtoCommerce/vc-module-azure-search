@@ -314,6 +314,8 @@ namespace VirtoCommerce.AzureSearchModule.Data
                     return DataType.DateTimeOffset;
                 case IndexDocumentFieldValueType.GeoPoint:
                     return DataType.GeographyPoint;
+                case IndexDocumentFieldValueType.Complex:
+                    return DataType.Complex;
                 default:
                     throw new ArgumentException($"Field {fieldName} has unsupported type {fieldType}", nameof(fieldType));
             }
