@@ -3,7 +3,7 @@
         "VirtoCommerce.Search.AzureSearch": {
             "TokenFilter": {
                 "title": "Token filter",
-                "description": "Select which token filter should be used when indexing searchable fields (requires rebuilding an index)"
+                "description": "Select which token filter to use when indexing searchable fields (requires rebuilding an index)"
             },
             "NGramTokenFilter": {
                 "MinGram": {

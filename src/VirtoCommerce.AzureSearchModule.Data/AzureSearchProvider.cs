@@ -15,12 +15,11 @@ using VirtoCommerce.SearchModule.Core.Model;
 using VirtoCommerce.SearchModule.Core.Services;
 using DataType = Microsoft.Azure.Search.Models.DataType;
 using Index = Microsoft.Azure.Search.Models.Index;
-using IndexingParameters = VirtoCommerce.SearchModule.Core.Model.IndexingParameters;
 using IndexingResult = VirtoCommerce.SearchModule.Core.Model.IndexingResult;
 
 namespace VirtoCommerce.AzureSearchModule.Data
 {
-    public class AzureSearchProvider : ISearchProvider
+    public class AzureSearchProvider : ISearchProvider, ISupportPartialUpdate
     {
         public const string ContentAnalyzerName = "content_analyzer";
         public const string NGramFilterName = "custom_ngram";
@@ -48,8 +47,6 @@ namespace VirtoCommerce.AzureSearchModule.Data
         private SearchServiceClient _client;
         protected SearchServiceClient Client => _client ??= CreateSearchServiceClient();
 
-        public bool IsIndexSwappingSupported => false;
-
         public virtual async Task DeleteIndexAsync(string documentType)
         {
             if (string.IsNullOrEmpty(documentType))
@@ -72,37 +69,17 @@ namespace VirtoCommerce.AzureSearchModule.Data
             }
         }
 
-        public virtual async Task<IndexingResult> IndexAsync(string documentType, IList<IndexDocument> documents, IndexingParameters parameters)
+        public virtual async Task<IndexingResult> IndexAsync(string documentType, IList<IndexDocument> documents)
         {
-            var indexName = GetIndexName(documentType);
+            var result = await InternalIndexAsync(documentType, documents, new IndexingParameters());
 
-            var providerFields = await GetMappingAsync(indexName);
-            var oldFieldsCount = providerFields.Count;
+            return result;
+        }
 
-            var providerDocuments = documents.Select(document => ConvertToProviderDocument(document, providerFields, documentType)).ToList();
+        public virtual async Task<IndexingResult> IndexPartialAsync(string documentType, IList<IndexDocument> documents)
+        {
+            var result = await InternalIndexAsync(documentType, documents, new IndexingParameters { PartialUpdate = true });
 
-            var updateMapping = !parameters.PartialUpdate && providerFields.Count != oldFieldsCount;
-            
-            var indexExits = await IndexExistsAsync(indexName);
-
-            if (!indexExits)
-            {
-                try
-                {
-                    await CreateIndex(indexName, providerFields);
-                }
-                catch (CloudException cloudException)
-                {
-                    ThrowExeption(cloudException, providerFields: providerFields);
-                }
-            }
-
-            if (updateMapping)
-            {
-                UpdateMapping(indexName, providerFields);
-            }
-
-            var result = await IndexWithRetryAsync(indexName, providerDocuments, 10, parameters.PartialUpdate);
             return result;
         }
 
@@ -161,9 +138,39 @@ namespace VirtoCommerce.AzureSearchModule.Data
             }
         }
 
-        public Task SwapIndexAsync(string documentType)
+
+        protected virtual async Task<IndexingResult> InternalIndexAsync(string documentType, IList<IndexDocument> documents, IndexingParameters parameters)
         {
-            throw new NotImplementedException("Index swapping is not supported in this Search Provider.");
+            var indexName = GetIndexName(documentType);
+
+            var providerFields = await GetMappingAsync(indexName);
+            var oldFieldsCount = providerFields.Count;
+
+            var providerDocuments = documents.Select(document => ConvertToProviderDocument(document, providerFields, documentType)).ToList();
+
+            var updateMapping = !parameters.PartialUpdate && providerFields.Count != oldFieldsCount;
+
+            var indexExits = await IndexExistsAsync(indexName);
+
+            if (!indexExits)
+            {
+                try
+                {
+                    await CreateIndex(indexName, providerFields);
+                }
+                catch (CloudException cloudException)
+                {
+                    ThrowExeption(cloudException, providerFields: providerFields);
+                }
+            }
+
+            if (updateMapping)
+            {
+                UpdateMapping(indexName, providerFields);
+            }
+
+            var result = await IndexWithRetryAsync(indexName, providerDocuments, 10, parameters.PartialUpdate);
+            return result;
         }
 
         protected virtual SearchDocument ConvertToProviderDocument(IndexDocument document, IList<Field> providerFields, string documentType)
@@ -307,11 +314,12 @@ namespace VirtoCommerce.AzureSearchModule.Data
                     return DataType.DateTimeOffset;
                 case IndexDocumentFieldValueType.GeoPoint:
                     return DataType.GeographyPoint;
+                case IndexDocumentFieldValueType.Complex:
+                    return DataType.Complex;
                 default:
                     throw new ArgumentException($"Field {fieldName} has unsupported type {fieldType}", nameof(fieldType));
             }
         }
-
 
         protected virtual async Task<IndexingResult> IndexWithRetryAsync(string indexName, IEnumerable<SearchDocument> providerDocuments, int retryCount, bool partialUpdate)
         {
