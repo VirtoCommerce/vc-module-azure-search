@@ -118,7 +118,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
                 var availableFields = await GetMappingAsync(indexName);
                 var indexClient = GetSearchIndexClient(indexName);
 
-                var providerRequests = AzureSearchRequestBuilder.BuildRequest(request, indexName, documentType, availableFields);
+                var providerRequests = AzureSearchRequestBuilder.BuildRequest(request, indexName, documentType, availableFields, _azureSearchOptions.QueryParserType);
                 var providerResponses = await Task.WhenAll(providerRequests.Select(r => indexClient.Documents.SearchAsync(r?.SearchText, r?.SearchParameters)));
 
                 // Copy aggregation ID from request to response

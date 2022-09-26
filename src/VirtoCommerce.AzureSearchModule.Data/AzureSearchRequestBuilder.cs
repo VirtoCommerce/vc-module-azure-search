@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using Microsoft.Azure.Search.Models;
 using VirtoCommerce.SearchModule.Core.Model;
 
@@ -10,9 +11,15 @@ namespace VirtoCommerce.AzureSearchModule.Data
 {
     public class AzureSearchRequestBuilder
     {
-        public static IList<AzureSearchRequest> BuildRequest(SearchRequest request, string indexName, string documentType, IList<Field> availableFields)
+        public static IList<AzureSearchRequest> BuildRequest(SearchRequest request, string indexName, string documentType, IList<Field> availableFields, QueryType queryParserType = QueryType.Simple)
         {
             var result = new List<AzureSearchRequest>();
+
+            // Force Switch to queryParserType Full
+            if (request.IsFuzzySearch)
+            {
+                queryParserType = QueryType.Full;
+            }
 
             // Create additional requests for each aggregation with filter which differs from main request filter or with empty field name.
 
@@ -37,17 +44,17 @@ namespace VirtoCommerce.AzureSearchModule.Data
                         {
                             foreach (var facetRequest in fieldGroup)
                             {
-                                result.Add(CreateRequest(searchText, facetRequest.Id, facetRequest.Filter, null, null, 0, 0));
+                                result.Add(CreateRequest(searchText, facetRequest.Id, facetRequest.Filter, null, null, 0, 0, queryParserType));
                             }
                         }
                         else
                         {
-                            result.Add(CreateRequest(searchText, null, filterGroup.Key, filterGroup.Select(f => f.Facet).ToArray(), null, 0, 0));
+                            result.Add(CreateRequest(searchText, null, filterGroup.Key, filterGroup.Select(f => f.Facet).ToArray(), null, 0, 0, queryParserType));
                         }
                     }
                 }
             }
-            var primaryRequest = CreateRequest(searchText, null, primaryFilter, primaryFacets, sorting, request.Skip, request.Take);
+            var primaryRequest = CreateRequest(searchText, null, primaryFilter, primaryFacets, sorting, request.Skip, request.Take, queryParserType);
             if (!string.IsNullOrEmpty(request.RawQuery))
             {
                 primaryRequest = CreateRawQueryRequest(request, sorting, request.Skip, request.Take);
@@ -67,7 +74,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
             };
             return new AzureSearchRequest { SearchParameters = searchParameters };
         }
-        private static AzureSearchRequest CreateRequest(string searchText, string aggregationId, string filter, IList<string> facets, IList<string> orderBy, int skip, int top)
+        private static AzureSearchRequest CreateRequest(string searchText, string aggregationId, string filter, IList<string> facets, IList<string> orderBy, int skip, int top, QueryType queryParserType = QueryType.Simple)
         {
             return new AzureSearchRequest
             {
@@ -75,7 +82,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
                 AggregationId = aggregationId,
                 SearchParameters = new SearchParameters
                 {
-                    QueryType = QueryType.Simple,
+                    QueryType = queryParserType,
                     SearchMode = SearchMode.All,
                     IncludeTotalResultCount = true,
                     Filter = filter,
@@ -89,7 +96,22 @@ namespace VirtoCommerce.AzureSearchModule.Data
 
         private static string GetSearchText(SearchRequest request)
         {
+            if (request.IsFuzzySearch)
+                return GetFuzzySearchText(request?.SearchKeywords, request.Fuzziness);
+
             return request?.SearchKeywords;
+        }
+
+        public static string GetFuzzySearchText(string searchKeywords, int? fuzzinessLevel)
+        {
+            if (string.IsNullOrWhiteSpace(searchKeywords))
+                return searchKeywords;
+
+            // Automatically extend query string where each term is followed by a tilde (~{LevelNumber}) operator at the end of each whole term
+            // <string> > <string>~
+            // budget hotel pool > budget~ hotel~ pool~ OR budget~2 hotel~2 pool~2
+
+            return Regex.Replace(searchKeywords, @"(\w+)", $"$0~{fuzzinessLevel}");
         }
 
         private static IList<string> GetSorting(SearchRequest request, IList<Field> availableFields)
