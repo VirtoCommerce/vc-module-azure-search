@@ -40,27 +40,42 @@ namespace VirtoCommerce.AzureSearchModule.Data
                 {
                     foreach (var fieldGroup in filterGroup.GroupBy(f => f.FieldName))
                     {
-                        if (string.IsNullOrEmpty(fieldGroup.Key))
-                        {
-                            foreach (var facetRequest in fieldGroup)
-                            {
-                                result.Add(CreateRequest(searchText, facetRequest.Id, facetRequest.Filter, null, null, 0, 0, queryParserType));
-                            }
-                        }
-                        else
-                        {
-                            result.Add(CreateRequest(searchText, null, filterGroup.Key, filterGroup.Select(f => f.Facet).ToArray(), null, 0, 0, queryParserType));
-                        }
+                        BuildRequiestForFieldGroup(queryParserType, result, searchText, filterGroup, fieldGroup);
                     }
                 }
             }
-            var primaryRequest = CreateRequest(searchText, null, primaryFilter, primaryFacets, sorting, request.Skip, request.Take, queryParserType);
-            if (!string.IsNullOrEmpty(request.RawQuery))
-            {
-                primaryRequest = CreateRawQueryRequest(request, sorting, request.Skip, request.Take);
-            }
+
+            var primaryRequest = BuildPrimaryRequest(request, queryParserType, searchText, primaryFilter, sorting, primaryFacets);
+
             result.Insert(0, primaryRequest);
             return result;
+        }
+
+        private static AzureSearchRequest BuildPrimaryRequest(SearchRequest request, QueryType queryParserType, string searchText, string primaryFilter, IList<string> sorting, List<string> primaryFacets)
+        {
+            if (!string.IsNullOrEmpty(request.RawQuery))
+            {
+                return CreateRawQueryRequest(request, sorting, request.Skip, request.Take);
+            }
+            else
+            {
+                return CreateRequest(searchText, null, primaryFilter, primaryFacets, sorting, request.Skip, request.Take, queryParserType);
+            }
+        }
+
+        private static void BuildRequiestForFieldGroup(QueryType queryParserType, List<AzureSearchRequest> result, string searchText, IGrouping<string, FacetRequest> filterGroup, IGrouping<string, FacetRequest> fieldGroup)
+        {
+            if (string.IsNullOrEmpty(fieldGroup.Key))
+            {
+                foreach (var facetRequest in fieldGroup)
+                {
+                    result.Add(CreateRequest(searchText, facetRequest.Id, facetRequest.Filter, null, null, 0, 0, queryParserType));
+                }
+            }
+            else
+            {
+                result.Add(CreateRequest(searchText, null, filterGroup.Key, filterGroup.Select(f => f.Facet).ToArray(), null, 0, 0, queryParserType));
+            }
         }
 
         private static AzureSearchRequest CreateRawQueryRequest(SearchRequest request, IList<string> sorting, int skip, int take)
@@ -97,7 +112,9 @@ namespace VirtoCommerce.AzureSearchModule.Data
         private static string GetSearchText(SearchRequest request)
         {
             if (request.IsFuzzySearch)
+            {
                 return GetFuzzySearchText(request?.SearchKeywords, request.Fuzziness);
+            }
 
             return request?.SearchKeywords;
         }
@@ -105,7 +122,9 @@ namespace VirtoCommerce.AzureSearchModule.Data
         public static string GetFuzzySearchText(string searchKeywords, int? fuzzinessLevel)
         {
             if (string.IsNullOrWhiteSpace(searchKeywords))
+            {
                 return searchKeywords;
+            }
 
             // Automatically extend query string where each term is followed by a tilde (~{LevelNumber}) operator at the end of each whole term
             // <string> > <string>~
