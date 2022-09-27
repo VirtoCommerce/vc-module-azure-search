@@ -13,29 +13,29 @@ namespace VirtoCommerce.AzureSearchModule.Tests
         [Fact]
         public void GetSimpleFuzzySearchText()
         {
-            var result = AzureSearchRequestBuilder.GetFuzzySearchText("blue",null);
-            Assert.Equal("blue~", result);
+            var result = AzureSearchRequestBuilder.GetFuzzySearchText("university", null);
+            Assert.Equal("university~", result);
         }
 
         [Fact]
         public void GetSimpleFuzzySearchTextWithLevel()
         {
-            var result = AzureSearchRequestBuilder.GetFuzzySearchText("blue", 2);
-            Assert.Equal("blue~2", result);
+            var result = AzureSearchRequestBuilder.GetFuzzySearchText("university", 2);
+            Assert.Equal("university~2", result);
         }
 
         [Fact]
         public void GetSimpleFuzzySearchTextMultiTerms()
         {
-            var result = AzureSearchRequestBuilder.GetFuzzySearchText("blue dress",null);
-            Assert.Equal("blue~ dress~", result);
+            var result = AzureSearchRequestBuilder.GetFuzzySearchText("university of washington", null);
+            Assert.Equal("university~ of~ washington~", result);
         }
 
         [Fact]
         public void GetSimpleFuzzySearchTextMultiTermsWithLevel()
         {
-            var result = AzureSearchRequestBuilder.GetFuzzySearchText("blue dress",3);
-            Assert.Equal("blue~3 dress~3", result);
+            var result = AzureSearchRequestBuilder.GetFuzzySearchText("university of washington", 3);
+            Assert.Equal("university~3 of~3 washington~3", result);
         }
     }
 }
