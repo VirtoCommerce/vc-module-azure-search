@@ -40,7 +40,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
                 {
                     foreach (var fieldGroup in filterGroup.GroupBy(f => f.FieldName))
                     {
-                        BuildRequiestForFieldGroup(queryParserType, result, searchText, filterGroup, fieldGroup);
+                        BuildRequiestForFieldGroup(request, queryParserType, result, searchText, filterGroup, fieldGroup);
                     }
                 }
             }
@@ -55,41 +55,41 @@ namespace VirtoCommerce.AzureSearchModule.Data
         {
             if (!string.IsNullOrEmpty(request.RawQuery))
             {
-                return CreateRawQueryRequest(request, sorting, request.Skip, request.Take);
+                return CreateRawQueryRequest(request, sorting);
             }
             else
             {
-                return CreateRequest(searchText, null, primaryFilter, primaryFacets, sorting, request.Skip, request.Take, queryParserType);
+                return CreateRequest(request, queryParserType, searchText, null, primaryFilter, primaryFacets, sorting);
             }
         }
 
-        private static void BuildRequiestForFieldGroup(QueryType queryParserType, List<AzureSearchRequest> result, string searchText, IGrouping<string, FacetRequest> filterGroup, IGrouping<string, FacetRequest> fieldGroup)
+        private static void BuildRequiestForFieldGroup(SearchRequest request, QueryType queryParserType, List<AzureSearchRequest> result, string searchText, IGrouping<string, FacetRequest> filterGroup, IGrouping<string, FacetRequest> fieldGroup)
         {
             if (string.IsNullOrEmpty(fieldGroup.Key))
             {
                 foreach (var facetRequest in fieldGroup)
                 {
-                    result.Add(CreateRequest(searchText, facetRequest.Id, facetRequest.Filter, null, null, 0, 0, queryParserType));
+                    result.Add(CreateRequest(request, queryParserType, searchText, facetRequest.Id, facetRequest.Filter, null, null));
                 }
             }
             else
             {
-                result.Add(CreateRequest(searchText, null, filterGroup.Key, filterGroup.Select(f => f.Facet).ToArray(), null, 0, 0, queryParserType));
+                result.Add(CreateRequest(request, queryParserType, searchText, null, filterGroup.Key, filterGroup.Select(f => f.Facet).ToArray(), null));
             }
         }
 
-        private static AzureSearchRequest CreateRawQueryRequest(SearchRequest request, IList<string> sorting, int skip, int take)
+        private static AzureSearchRequest CreateRawQueryRequest(SearchRequest request, IList<string> sorting)
         {
             var searchParameters = new SearchParameters
             {
                 Filter = request.RawQuery,
                 OrderBy = sorting,
-                Skip = skip,
-                Top = take
+                Skip = request.Skip,
+                Top = request.Take
             };
             return new AzureSearchRequest { SearchParameters = searchParameters };
         }
-        private static AzureSearchRequest CreateRequest(string searchText, string aggregationId, string filter, IList<string> facets, IList<string> orderBy, int skip, int top, QueryType queryParserType = QueryType.Simple)
+        private static AzureSearchRequest CreateRequest(SearchRequest request, QueryType queryParserType, string searchText, string aggregationId, string filter, IList<string> facets, IList<string> orderBy)
         {
             return new AzureSearchRequest
             {
@@ -103,8 +103,8 @@ namespace VirtoCommerce.AzureSearchModule.Data
                     Filter = filter,
                     Facets = facets,
                     OrderBy = orderBy,
-                    Skip = skip,
-                    Top = top,
+                    Skip = request.Skip,
+                    Top = request.Take,
                 }
             };
         }
