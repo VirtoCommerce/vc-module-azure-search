@@ -373,7 +373,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
         protected virtual string GetIndexName(string documentType)
         {
             // Use different index for each document type
-            return string.Join("-", _searchOptions.Scope, documentType).ToLowerInvariant();
+            return string.Join("-", _searchOptions.GetScope(documentType), documentType).ToLowerInvariant();
         }
 
         protected virtual Task<bool> IndexExistsAsync(string indexName)
