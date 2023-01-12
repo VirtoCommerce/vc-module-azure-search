@@ -35,8 +35,8 @@ Azure Cognitive Search supports fuzzy search a type of query that compensates fo
 
 Two options to activate fuzzy search:
 1. **Manually.** Set `QueryParserType` to `Full` in configuration and append a tilde character(~) after each whole term manually. [Read about fuzzy query here](https://learn.microsoft.com/en-us/azure/search/search-query-fuzzy)
-2. **Automaticaly.** Set `SearchRequest.IsFuzzySearch` to true. Virto Commerce Azure Search Module activates Full query parser and adjust the query term with followed by a tilde (~) operator at the end of each whole term.
-For example, if your query (`SearchRequest.SearchKeywords') has three terms "university of washington", the module adjusts every term in the query to "university~ of~ washington~".
+2. **Automaticaly.** Set `SearchRequest.IsFuzzySearch` to true. Virto Commerce Azure Search Module activates Full query parser and adjust the query term with followed by a tilde (\~) operator at the end of each whole term.
+For example, if your query (`SearchRequest.SearchKeywords`) has three terms "university of washington", the module adjusts every term in the query to "university\~ of\~ washington\~".
 
 > The default distance (`SearchRequest.Fuzziness`) is 2. 
 
