@@ -19,11 +19,20 @@ using IndexingResult = VirtoCommerce.SearchModule.Core.Model.IndexingResult;
 
 namespace VirtoCommerce.AzureSearchModule.Data
 {
-    public class AzureSearchProvider : ISearchProvider, ISupportPartialUpdate
+    public class AzureSearchProvider : ISearchProvider, ISupportPartialUpdate, ISupportSuggestions
     {
         public const string ContentAnalyzerName = "content_analyzer";
         public const string NGramFilterName = "custom_ngram";
         public const string EdgeNGramFilterName = "custom_edge_ngram";
+
+        private const string SuggesterName = "name_suggester";
+
+        /// <summary>
+        /// If a filed with this name is encountered during indexing a Completion suggester will be automatically added to it
+        /// </summary>
+        private readonly string _completionFieldName = AzureSearchHelper.ToAzureFieldName("name");
+        private const string CompletionContextFieldName = "catalog";
+        private readonly string _completionContextAzureFieldName = AzureSearchHelper.ToAzureFieldName(CompletionContextFieldName);
 
         private readonly AzureSearchOptions _azureSearchOptions;
         private readonly SearchOptions _searchOptions;
@@ -138,6 +147,53 @@ namespace VirtoCommerce.AzureSearchModule.Data
             }
         }
 
+        public async Task<SuggestionResponse> GetSuggestionsAsync(string documentType, SuggestionRequest request)
+        {
+            var result = new SuggestionResponse();
+
+            if (request.Fields.IsNullOrEmpty())
+            {
+                return result;
+            }
+
+            try
+            {
+                var indexName = GetIndexName(documentType);
+
+                var indexClient = GetSearchIndexClient(indexName);
+
+                var suggestParameters = new SuggestParameters
+                {
+                    Top = request.Size,
+                };
+
+                // See if mapping has context field and add context filter to filter out suggestions
+                if (!string.IsNullOrWhiteSpace(request.CatalogId))
+                {
+                    var availableFields = await GetMappingAsync(indexName);
+                    var filter = AzureSearchRequestBuilder.GetFilters(new TermFilter
+                    {
+                        FieldName = CompletionContextFieldName,
+                        Values = new[]
+                        {
+                        request.CatalogId
+                    }
+                    }, availableFields);
+
+                    suggestParameters.Filter = filter;
+                }
+
+                var suggestResult = await indexClient.Documents.SuggestAsync(request.Query, SuggesterName, suggestParameters);
+
+                result.Suggestions = suggestResult.Results.Select(x => x.Text).ToList();
+            }
+            catch (Exception ex)
+            {
+                throw new SearchException(ex.Message, ex);
+            }
+
+            return result;
+        }
 
         protected virtual async Task<IndexingResult> InternalIndexAsync(string documentType, IList<IndexDocument> documents, IndexingParameters parameters)
         {
@@ -419,6 +475,12 @@ namespace VirtoCommerce.AzureSearchModule.Data
                     }
                 },
             };
+
+            if (providerFields.Any(x => x.Name.EqualsInvariant(_completionFieldName)))
+            {
+                var suggester = new Suggester(SuggesterName, new[] { _completionFieldName });
+                index.Suggesters = new Suggester[] { suggester };
+            }
 
             return index;
         }
