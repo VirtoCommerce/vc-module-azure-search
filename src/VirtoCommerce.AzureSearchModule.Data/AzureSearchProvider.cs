@@ -25,14 +25,11 @@ namespace VirtoCommerce.AzureSearchModule.Data
         public const string NGramFilterName = "custom_ngram";
         public const string EdgeNGramFilterName = "custom_edge_ngram";
 
-        private const string SuggesterName = "name_suggester";
-
         /// <summary>
-        /// If a filed with this name is encountered during indexing a Completion suggester will be automatically added to it
+        /// Name of the default suggeser
         /// </summary>
-        private readonly string _completionFieldName = AzureSearchHelper.ToAzureFieldName("name");
-        private const string CompletionContextFieldName = "catalog";
-        private readonly string _completionContextAzureFieldName = AzureSearchHelper.ToAzureFieldName(CompletionContextFieldName);
+        private const string SuggesterName = "default_suggester";
+        private const string SuggestFieldSuffix = "__suggest";
 
         private readonly AzureSearchOptions _azureSearchOptions;
         private readonly SearchOptions _searchOptions;
@@ -167,22 +164,6 @@ namespace VirtoCommerce.AzureSearchModule.Data
                     Top = request.Size,
                 };
 
-                // See if mapping has context field and add context filter to filter out suggestions
-                if (!string.IsNullOrWhiteSpace(request.CatalogId))
-                {
-                    var availableFields = await GetMappingAsync(indexName);
-                    var filter = AzureSearchRequestBuilder.GetFilters(new TermFilter
-                    {
-                        FieldName = CompletionContextFieldName,
-                        Values = new[]
-                        {
-                        request.CatalogId
-                    }
-                    }, availableFields);
-
-                    suggestParameters.Filter = filter;
-                }
-
                 var suggestResult = await indexClient.Documents.SuggestAsync(request.Query, SuggesterName, suggestParameters);
 
                 result.Suggestions = suggestResult.Results.Select(x => x.Text).ToList();
@@ -282,6 +263,13 @@ namespace VirtoCommerce.AzureSearchModule.Data
             {
                 providerField = CreateProviderField(documentType, fieldName, field);
                 providerFields?.Add(providerField);
+
+                // create a duplicate field for suggestions only
+                if (field.IsSuggestable)
+                {
+                    var suggestField = CreateProviderField(documentType, $"{fieldName}{SuggestFieldSuffix}", field);
+                    providerFields?.Add(suggestField);
+                }
             }
 
             return providerField;
@@ -476,9 +464,22 @@ namespace VirtoCommerce.AzureSearchModule.Data
                 },
             };
 
-            if (providerFields.Any(x => x.Name.EqualsInvariant(_completionFieldName)))
+            // try adding suggesters
+            var suggestSourceFields = new List<string>();
+            foreach (var suggestField in providerFields.Where(x => x.Name.EndsWith(SuggestFieldSuffix)))
             {
-                var suggester = new Suggester(SuggesterName, new[] { _completionFieldName });
+                //take original field without the suffix
+                var originalFieldName = suggestField.Name.Replace(SuggestFieldSuffix, string.Empty);
+                var originalSuggestField = providerFields.FirstOrDefault(x => x.Name.EqualsInvariant(originalFieldName));
+                if (originalSuggestField != null)
+                {
+                    suggestSourceFields.Add(originalSuggestField.Name);
+                }
+            }
+
+            if (suggestSourceFields.Any())
+            {
+                var suggester = new Suggester(SuggesterName, suggestSourceFields);
                 index.Suggesters = new Suggester[] { suggester };
             }
 
