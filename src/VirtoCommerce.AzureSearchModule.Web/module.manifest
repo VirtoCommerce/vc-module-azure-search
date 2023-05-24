@@ -21,7 +21,7 @@
   <assemblyFile>VirtoCommerce.AzureSearchModule.Web.dll</assemblyFile>
   <moduleType>VirtoCommerce.AzureSearchModule.Web.Module, VirtoCommerce.AzureSearchModule.Web</moduleType>
   <dependencies>
-    <dependency id="VirtoCommerce.Search" version="3.222.0" />
+    <dependency id="VirtoCommerce.Search" version="3.223.0" />
   </dependencies>
   <groups>
     <group>commerce</group>

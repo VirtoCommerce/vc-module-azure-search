@@ -28,8 +28,8 @@ namespace VirtoCommerce.AzureSearchModule.Data
         /// <summary>
         /// Name of the default suggeser
         /// </summary>
-        private const string SuggesterName = "default_suggester";
-        private const string SuggestFieldSuffix = "__suggest";
+        protected const string SuggesterName = "default_suggester";
+        protected const string SuggestFieldSuffix = "__suggest";
 
         private readonly AzureSearchOptions _azureSearchOptions;
         private readonly SearchOptions _searchOptions;
