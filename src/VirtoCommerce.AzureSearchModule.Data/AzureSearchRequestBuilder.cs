@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -49,6 +48,11 @@ namespace VirtoCommerce.AzureSearchModule.Data
 
             result.Insert(0, primaryRequest);
             return result;
+        }
+
+        public static string GetFilters(IFilter filter, IList<Field> availableFields)
+        {
+            return GetFilterExpressionRecursive(filter, availableFields);
         }
 
         private static AzureSearchRequest BuildPrimaryRequest(SearchRequest request, QueryType queryParserType, string searchText, string primaryFilter, IList<string> sorting, List<string> primaryFacets)
@@ -171,7 +175,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
             else if (sortingField.FieldName == "score")
             {
                 result = string.Join(" ", "search.score()", sortingField.IsDescending ? "desc" : "asc");
-                
+
             }
 
             return result;
