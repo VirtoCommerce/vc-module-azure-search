@@ -351,6 +351,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
                 case IndexDocumentFieldValueType.Long:
                     return DataType.Int64;
                 case IndexDocumentFieldValueType.Double:
+                case IndexDocumentFieldValueType.Decimal:
                     return DataType.Double;
                 case IndexDocumentFieldValueType.Boolean:
                     return DataType.Boolean;
