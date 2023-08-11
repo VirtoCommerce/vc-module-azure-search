@@ -241,6 +241,11 @@ namespace VirtoCommerce.AzureSearchModule.Data
                 else
                 {
                     var providerField = AddProviderField(documentType, providerFields, fieldName, field);
+                    if (providerField == null)
+                    {
+                        continue;
+                    }
+
                     var isCollection = providerField.Type.ToString().StartsWith("Collection(");
 
                     var point = field.Value as GeoPoint;
@@ -262,13 +267,16 @@ namespace VirtoCommerce.AzureSearchModule.Data
             if (providerField == null)
             {
                 providerField = CreateProviderField(documentType, fieldName, field);
-                providerFields?.Add(providerField);
-
-                // create a duplicate field for suggestions only
-                if (field.IsSuggestable)
+                if (providerField != null)
                 {
-                    var suggestField = CreateProviderField(documentType, $"{fieldName}{SuggestFieldSuffix}", field);
-                    providerFields?.Add(suggestField);
+                    providerFields?.Add(providerField);
+
+                    // create a duplicate field for suggestions only
+                    if (field.IsSuggestable)
+                    {
+                        var suggestField = CreateProviderField(documentType, $"{fieldName}{SuggestFieldSuffix}", field);
+                        providerFields?.Add(suggestField);
+                    }
                 }
             }
 
@@ -286,6 +294,12 @@ namespace VirtoCommerce.AzureSearchModule.Data
             else
             {
                 providerFieldType = GetProviderFieldType(documentType, fieldName, field.ValueType);
+            }
+
+            // Temporarily disable indexing of complex types
+            if (providerFieldType == DataType.Complex || providerFieldType == DataType.Collection(DataType.Complex))
+            {
+                return null;
             }
 
             var isGeoPoint = providerFieldType == DataType.GeographyPoint;
