@@ -317,12 +317,19 @@ namespace VirtoCommerce.AzureSearchModule.Data
                 // create a duplicate field for suggestions only
                 if (field.IsSuggestable)
                 {
-                    var suggestField = CreateProviderField(documentType, $"{fieldName}{SuggestFieldSuffix}", field);
+                    var suggestField = CreateProviderField(documentType, $"{fieldName}{SuggestFieldSuffix}", field, providerFieldType);
                     providerFields?.Add(suggestField);
                 }
             }
 
             return providerField;
+        }
+
+        [Obsolete("Use CreateProviderField(string documentType, string fieldName, IndexDocumentField field, DataType providerFieldType)")]
+        protected virtual Field CreateProviderField(string documentType, string fieldName, IndexDocumentField field)
+        {
+            var providerFieldType = GetProviderFieldType(documentType, fieldName, field);
+            return CreateProviderField(documentType, fieldName, field, providerFieldType);
         }
 
         protected virtual Field CreateProviderField(string documentType, string fieldName, IndexDocumentField field, DataType providerFieldType)
@@ -353,12 +360,6 @@ namespace VirtoCommerce.AzureSearchModule.Data
             }
 
             return providerField;
-        }
-
-        protected virtual Field CreateProviderField(string documentType, string fieldName, IndexDocumentField field)
-        {
-            var providerFieldType = GetProviderFieldType(documentType, fieldName, field);
-            return CreateProviderField(documentType, fieldName, field, providerFieldType);
         }
 
         private DataType GetProviderFieldType(string documentType, string fieldName, IndexDocumentField field)
