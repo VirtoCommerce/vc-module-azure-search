@@ -249,39 +249,37 @@ namespace VirtoCommerce.AzureSearchModule.Data
                     var providerField = AddProviderField(documentType, providerFields, fieldName, field, providerFieldType);
                     var isCollection = providerField.Type.ToString().StartsWith("Collection(");
 
-                    object value;
-                    if (isGeoPoint)
-                    {
-                        if (isCollection)
-                        {
-                            value = field.Values.OfType<GeoPoint>().Select(x => x.ToDocumentValue()).ToArray();
-                        }
-                        else
-                        {
-                            value = (field.Value as GeoPoint)?.ToDocumentValue();
-                        }
-                    }
-                    else if (isComplex)
-                    {
-                        if (isCollection)
-                        {
-                            value = field.Values.Select(x => x.SerializeJson() as object).ToArray();
-                        }
-                        else
-                        {
-                            value = field.Value.SerializeJson();
-                        }
-                    }
-                    else
-                    {
-                        value = isCollection ? field.Values : field.Value;
-                    }
+                    var value = GetFieldValue(field, isGeoPoint, isComplex, isCollection);
 
                     result.Add(fieldName, value);
                 }
             }
 
             return result;
+        }
+
+        private static object GetFieldValue(IndexDocumentField field, bool isGeoPoint, bool isComplex, bool isCollection)
+        {
+            object value;
+
+            if (isGeoPoint)
+            {
+                value = isCollection
+                    ? field.Values.OfType<GeoPoint>().Select(x => x.ToDocumentValue()).ToArray()
+                    : ((field.Value as GeoPoint)?.ToDocumentValue());
+            }
+            else if (isComplex)
+            {
+                value = isCollection
+                    ? field.Values.Select(x => x.SerializeJson() as object).ToArray()
+                    : field.Value.SerializeJson();
+            }
+            else
+            {
+                value = isCollection ? field.Values : field.Value;
+            }
+
+            return value;
         }
 
         [Obsolete("Use AddProviderField(string documentType, IList<Field> providerFields, string fieldName, IndexDocumentField field, DataType providerFieldType)")]
