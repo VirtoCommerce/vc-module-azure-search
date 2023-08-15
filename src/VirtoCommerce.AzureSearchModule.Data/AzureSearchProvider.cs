@@ -240,13 +240,42 @@ namespace VirtoCommerce.AzureSearchModule.Data
                 }
                 else
                 {
-                    var providerField = AddProviderField(documentType, providerFields, fieldName, field);
+                    var providerFieldType = GetProviderFieldType(documentType, field.Name, field);
+
+                    var isGeoPoint = providerFieldType == DataType.GeographyPoint;
+                    var isComplex = providerFieldType == DataType.Complex;
+                    providerFieldType = isComplex ? DataType.String : providerFieldType; // transform DataType from complex to string
+
+                    var providerField = AddProviderField(documentType, providerFields, fieldName, field, providerFieldType);
                     var isCollection = providerField.Type.ToString().StartsWith("Collection(");
 
-                    var point = field.Value as GeoPoint;
-                    var value = point != null
-                        ? (isCollection ? field.Values.Select(v => ((GeoPoint)v).ToDocumentValue()).ToArray() : point.ToDocumentValue())
-                        : (isCollection ? field.Values : field.Value);
+                    object value;
+                    if (isGeoPoint)
+                    {
+                        if (isCollection)
+                        {
+                            value = field.Values.OfType<GeoPoint>().Select(x => x.ToDocumentValue()).ToArray();
+                        }
+                        else
+                        {
+                            value = (field.Value as GeoPoint)?.ToDocumentValue();
+                        }
+                    }
+                    else if (isComplex)
+                    {
+                        if (isCollection)
+                        {
+                            value = field.Values.Select(x => x.SerializeJson() as object).ToArray();
+                        }
+                        else
+                        {
+                            value = field.Value.SerializeJson();
+                        }
+                    }
+                    else
+                    {
+                        value = isCollection ? field.Values : field.Value;
+                    }
 
                     result.Add(fieldName, value);
                 }
@@ -255,6 +284,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
             return result;
         }
 
+        [Obsolete("Use AddProviderField(string documentType, IList<Field> providerFields, string fieldName, IndexDocumentField field, DataType providerFieldType)")]
         protected virtual Field AddProviderField(string documentType, IList<Field> providerFields, string fieldName, IndexDocumentField field)
         {
             var providerField = providerFields?.FirstOrDefault(f => f.Name == fieldName);
@@ -275,19 +305,28 @@ namespace VirtoCommerce.AzureSearchModule.Data
             return providerField;
         }
 
-        protected virtual Field CreateProviderField(string documentType, string fieldName, IndexDocumentField field)
+        protected virtual Field AddProviderField(string documentType, IList<Field> providerFields, string fieldName, IndexDocumentField field, DataType providerFieldType)
         {
-            DataType providerFieldType;
-            if (field.ValueType == IndexDocumentFieldValueType.Undefined)
+            var providerField = providerFields?.FirstOrDefault(f => f.Name == fieldName);
+
+            if (providerField == null)
             {
-                var originalFieldType = field.Value?.GetType() ?? typeof(object);
-                providerFieldType = GetProviderFieldType(documentType, fieldName, originalFieldType);
-            }
-            else
-            {
-                providerFieldType = GetProviderFieldType(documentType, fieldName, field.ValueType);
+                providerField = CreateProviderField(documentType, fieldName, field, providerFieldType);
+                providerFields?.Add(providerField);
+
+                // create a duplicate field for suggestions only
+                if (field.IsSuggestable)
+                {
+                    var suggestField = CreateProviderField(documentType, $"{fieldName}{SuggestFieldSuffix}", field);
+                    providerFields?.Add(suggestField);
+                }
             }
 
+            return providerField;
+        }
+
+        protected virtual Field CreateProviderField(string documentType, string fieldName, IndexDocumentField field, DataType providerFieldType)
+        {
             var isGeoPoint = providerFieldType == DataType.GeographyPoint;
             var isString = providerFieldType == DataType.String;
             var isCollection = field.IsCollection && isString;
@@ -314,6 +353,28 @@ namespace VirtoCommerce.AzureSearchModule.Data
             }
 
             return providerField;
+        }
+
+        protected virtual Field CreateProviderField(string documentType, string fieldName, IndexDocumentField field)
+        {
+            var providerFieldType = GetProviderFieldType(documentType, fieldName, field);
+            return CreateProviderField(documentType, fieldName, field, providerFieldType);
+        }
+
+        private DataType GetProviderFieldType(string documentType, string fieldName, IndexDocumentField field)
+        {
+            DataType providerFieldType;
+            if (field.ValueType == IndexDocumentFieldValueType.Undefined)
+            {
+                var originalFieldType = field.Value?.GetType() ?? typeof(object);
+                providerFieldType = GetProviderFieldType(documentType, fieldName, originalFieldType);
+            }
+            else
+            {
+                providerFieldType = GetProviderFieldType(documentType, fieldName, field.ValueType);
+            }
+
+            return providerFieldType;
         }
 
         [Obsolete("Left for backwards compatability.")]
