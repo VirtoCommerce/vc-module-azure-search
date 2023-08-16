@@ -214,7 +214,10 @@ namespace VirtoCommerce.AzureSearchModule.Data
         {
             var result = new SearchDocument { Id = document.Id };
 
-            document.Fields.Insert(0, new IndexDocumentField(AzureSearchHelper.RawKeyFieldName, document.Id) { IsRetrievable = true, IsFilterable = true });
+            if (!document.Fields.Any(x => x.Name == AzureSearchHelper.RawKeyFieldName))
+            {
+                document.Fields.Insert(0, new IndexDocumentField(AzureSearchHelper.RawKeyFieldName, document.Id) { IsRetrievable = true, IsFilterable = true });
+            }
 
             foreach (var field in document.Fields.OrderBy(f => f.Name))
             {
