@@ -252,7 +252,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
                     var providerField = AddProviderField(documentType, providerFields, fieldName, field, providerFieldType);
                     var isCollection = providerField.Type.ToString().StartsWith("Collection(");
 
-                    if (providerFieldType == providerField.Type || field.IsCollection && DataType.Collection(DataType.String) == providerField.Type)
+                    if (FieldTypeMatch(field, providerFieldType, providerField))
                     {
                         var value = GetFieldValue(field, isGeoPoint, isComplex, isCollection);
                         result.Add(fieldName, value);
@@ -261,6 +261,11 @@ namespace VirtoCommerce.AzureSearchModule.Data
             }
 
             return result;
+        }
+
+        private static bool FieldTypeMatch(IndexDocumentField field, DataType providerFieldType, Field providerField)
+        {
+            return providerFieldType == providerField.Type || field.IsCollection && DataType.Collection(DataType.String) == providerField.Type;
         }
 
         private static object GetFieldValue(IndexDocumentField field, bool isGeoPoint, bool isComplex, bool isCollection)
