@@ -252,9 +252,11 @@ namespace VirtoCommerce.AzureSearchModule.Data
                     var providerField = AddProviderField(documentType, providerFields, fieldName, field, providerFieldType);
                     var isCollection = providerField.Type.ToString().StartsWith("Collection(");
 
-                    var value = GetFieldValue(field, isGeoPoint, isComplex, isCollection);
-
-                    result.Add(fieldName, value);
+                    if (providerFieldType == providerField.Type || field.IsCollection && DataType.Collection(DataType.String) == providerField.Type)
+                    {
+                        var value = GetFieldValue(field, isGeoPoint, isComplex, isCollection);
+                        result.Add(fieldName, value);
+                    }
                 }
             }
 
