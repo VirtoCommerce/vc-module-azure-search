@@ -266,15 +266,15 @@ namespace VirtoCommerce.AzureSearchModule.Data
             return result;
         }
 
-        private static bool FieldTypeMatch(DataType documentieldType, DataType schemaFieldType)
+        private static bool FieldTypeMatch(DataType documentFieldType, DataType schemaFieldType)
         {
             // integer literal can be converted to double in schema
-            if ((documentieldType == DataType.Int32 || documentieldType == DataType.Int64) && schemaFieldType == DataType.Double)
+            if ((documentFieldType == DataType.Int32 || documentFieldType == DataType.Int64) && schemaFieldType == DataType.Double)
             {
                 return true;
             }
 
-            return documentieldType == schemaFieldType || DataType.Collection(documentieldType) == schemaFieldType;
+            return documentFieldType == schemaFieldType || DataType.Collection(documentFieldType) == schemaFieldType;
         }
 
         private static object GetFieldValue(IndexDocumentField field, bool isGeoPoint, bool isComplex, bool isCollection)
