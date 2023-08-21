@@ -252,20 +252,29 @@ namespace VirtoCommerce.AzureSearchModule.Data
                     var providerField = AddProviderField(documentType, providerFields, fieldName, field, providerFieldType);
                     var isCollection = providerField.Type.ToString().StartsWith("Collection(");
 
-                    if (FieldTypeMatch(field, providerFieldType, providerField))
+                    if (!FieldTypeMatch(providerFieldType, providerField.Type))
                     {
-                        var value = GetFieldValue(field, isGeoPoint, isComplex, isCollection);
-                        result.Add(fieldName, value);
+                        var message = $"Field type mismatch. Document type: {documentType}. Document Id: {document.Id}. Field name: {field.Name}. Document field type: {providerFieldType}. Schema field type: {providerField.Type}";
+                        ThrowException(message, null);
                     }
+
+                    var value = GetFieldValue(field, isGeoPoint, isComplex, isCollection);
+                    result.Add(fieldName, value);
                 }
             }
 
             return result;
         }
 
-        private static bool FieldTypeMatch(IndexDocumentField field, DataType providerFieldType, Field providerField)
+        private static bool FieldTypeMatch(DataType documentieldType, DataType schemaFieldType)
         {
-            return providerFieldType == providerField.Type || field.IsCollection && DataType.Collection(DataType.String) == providerField.Type;
+            // integer literal can be converted to double in schema
+            if ((documentieldType == DataType.Int32 || documentieldType == DataType.Int64) && schemaFieldType == DataType.Double)
+            {
+                return true;
+            }
+
+            return documentieldType == schemaFieldType || DataType.Collection(documentieldType) == schemaFieldType;
         }
 
         private static object GetFieldValue(IndexDocumentField field, bool isGeoPoint, bool isComplex, bool isCollection)
