@@ -203,8 +203,15 @@ namespace VirtoCommerce.AzureSearchModule.Data
                 }
                 else
                 {
+                    var providerFieldType = GetProviderFieldType(documentType, field.Name, field);
                     var providerField = AddProviderField(documentType, providerFields, fieldName, field);
                     var isCollection = providerField.Type.ToString().StartsWith("Collection(");
+
+                    if (!FieldTypeMatch(providerFieldType, providerField.Type))
+                    {
+                        var message = $"Field type mismatch. Document type: {documentType}. Document Id: {document.Id}. Field name: {field.Name}. Document field type: {providerFieldType}. Schema field type: {providerField.Type}";
+                        ThrowException(message, null);
+                    }
 
                     var point = field.Value as GeoPoint;
                     var value = point != null
@@ -216,6 +223,17 @@ namespace VirtoCommerce.AzureSearchModule.Data
             }
 
             return result;
+        }
+
+        private static bool FieldTypeMatch(DataType documentFieldType, DataType schemaFieldType)
+        {
+            // integer literal can be converted to double in schema
+            if ((documentFieldType == DataType.Int32 || documentFieldType == DataType.Int64) && schemaFieldType == DataType.Double)
+            {
+                return true;
+            }
+
+            return documentFieldType == schemaFieldType || DataType.Collection(documentFieldType) == schemaFieldType;
         }
 
         protected virtual Field AddProviderField(string documentType, IList<Field> providerFields, string fieldName, IndexDocumentField field)
@@ -270,6 +288,22 @@ namespace VirtoCommerce.AzureSearchModule.Data
             }
 
             return providerField;
+        }
+
+        private DataType GetProviderFieldType(string documentType, string fieldName, IndexDocumentField field)
+        {
+            DataType providerFieldType;
+            if (field.ValueType == IndexDocumentFieldValueType.Undefined)
+            {
+                var originalFieldType = field.Value?.GetType() ?? typeof(object);
+                providerFieldType = GetProviderFieldType(documentType, fieldName, originalFieldType);
+            }
+            else
+            {
+                providerFieldType = GetProviderFieldType(documentType, fieldName, field.ValueType);
+            }
+
+            return providerFieldType;
         }
 
         [Obsolete("Left for backwards compatability.")]
