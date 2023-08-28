@@ -252,13 +252,29 @@ namespace VirtoCommerce.AzureSearchModule.Data
                     var providerField = AddProviderField(documentType, providerFields, fieldName, field, providerFieldType);
                     var isCollection = providerField.Type.ToString().StartsWith("Collection(");
 
-                    var value = GetFieldValue(field, isGeoPoint, isComplex, isCollection);
+                    if (!FieldTypeMatch(providerFieldType, providerField.Type))
+                    {
+                        var message = $"Field type mismatch. Document type: {documentType}. Document Id: {document.Id}. Field name: {field.Name}. Document field type: {providerFieldType}. Schema field type: {providerField.Type}";
+                        ThrowException(message, null);
+                    }
 
+                    var value = GetFieldValue(field, isGeoPoint, isComplex, isCollection);
                     result.Add(fieldName, value);
                 }
             }
 
             return result;
+        }
+
+        private static bool FieldTypeMatch(DataType documentFieldType, DataType schemaFieldType)
+        {
+            // integer literal can be converted to double in schema
+            if ((documentFieldType == DataType.Int32 || documentFieldType == DataType.Int64) && schemaFieldType == DataType.Double)
+            {
+                return true;
+            }
+
+            return documentFieldType == schemaFieldType || DataType.Collection(documentFieldType) == schemaFieldType;
         }
 
         private static object GetFieldValue(IndexDocumentField field, bool isGeoPoint, bool isComplex, bool isCollection)
