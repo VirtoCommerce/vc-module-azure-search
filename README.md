@@ -44,6 +44,8 @@ For example, if your query (`SearchRequest.SearchKeywords`) has three terms "uni
 
 * Collections in a document can only contain strings. This means you cannot index a document with a collection of numbers.
 * Document field names can only contain letters, digits and underscores. When indexing a document with invalid characters in a field name, all such characters will be replaced with an underscore, which can lead to duplicate fields.
+* When `QueryParserType` is set to `Full`, [Lucene syntax rules](https://learn.microsoft.com/en-us/azure/search/query-lucene-syntax) are applied to the search string. 
+  In order to use any of the search operators as part of the search text, [escape](https://learn.microsoft.com/en-us/azure/search/query-lucene-syntax#escaping-special-characters) the character by prefixing it with a single backslash (`\`).
 
 ## Documentation
 
