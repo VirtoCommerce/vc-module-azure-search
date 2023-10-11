@@ -10,7 +10,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
 {
     public class AzureSearchRequestBuilder : IAzureSearchRequestBuilder
     {
-        public virtual IList<AzureSearchRequest> BuildRequest(SearchRequest request, string indexName, string documentType, IList<Field> availableFields, QueryType queryParserType = QueryType.Simple)
+        public virtual IList<AzureSearchRequest> BuildRequest(SearchRequest request, string indexName, string documentType, IList<Field> availableFields, QueryType queryParserType)
         {
             var result = new List<AzureSearchRequest>();
 
