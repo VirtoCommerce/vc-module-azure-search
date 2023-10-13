@@ -33,7 +33,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
             {
                 if (filterGroup.Key == primaryFilter)
                 {
-                    primaryFacets.AddRange(filterGroup.Select(f => f.Facet));
+                    primaryFacets.AddRange(filterGroup.Select(f => f.AggregationRequest));
                 }
                 else
                 {
@@ -78,7 +78,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
             }
             else
             {
-                result.Add(CreateRequest(request, queryParserType, searchText, null, filterGroup.Key, filterGroup.Select(f => f.Facet).ToArray(), null));
+                result.Add(CreateRequest(request, queryParserType, searchText, null, filterGroup.Key, filterGroup.Select(f => f.AggregationRequest).ToArray(), null));
             }
         }
 
@@ -433,7 +433,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
                             Id = aggregation.Id,
                             FieldName = aggregation.FieldName,
                             Filter = GetFilterExpressionRecursive(aggregation.Filter, availableFields),
-                            Facet = facet,
+                            AggregationRequest = facet,
                         };
 
                         result.Add(facetRequest);
