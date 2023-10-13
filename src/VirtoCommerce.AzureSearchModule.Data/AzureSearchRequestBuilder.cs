@@ -146,6 +146,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
                 var fields = request.Sorting
                     .Select(f => GetSortingField(f, availableFields))
                     .Where(s => !string.IsNullOrEmpty(s))
+                    .Distinct()
                     .ToArray();
 
                 if (fields.Any())
