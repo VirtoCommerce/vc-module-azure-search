@@ -35,8 +35,9 @@ namespace VirtoCommerce.AzureSearchModule.Data
         private readonly SearchOptions _searchOptions;
         private readonly ISettingsManager _settingsManager;
         private readonly ConcurrentDictionary<string, IList<Field>> _mappings = new ConcurrentDictionary<string, IList<Field>>();
+        private readonly IAzureSearchRequestBuilder _requestBuilder;
 
-        public AzureSearchProvider(IOptions<AzureSearchOptions> azureSearchOptions, IOptions<SearchOptions> searchOptions, ISettingsManager settingsManager)
+        public AzureSearchProvider(IOptions<AzureSearchOptions> azureSearchOptions, IOptions<SearchOptions> searchOptions, ISettingsManager settingsManager, IAzureSearchRequestBuilder requestBuilder)
         {
             if (azureSearchOptions == null)
                 throw new ArgumentNullException(nameof(azureSearchOptions));
@@ -48,6 +49,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
             _searchOptions = searchOptions.Value;
 
             _settingsManager = settingsManager ?? throw new ArgumentNullException(nameof(settingsManager));
+            _requestBuilder = requestBuilder;
         }
 
         private SearchServiceClient _client;
@@ -124,7 +126,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
                 var availableFields = await GetMappingAsync(indexName);
                 var indexClient = GetSearchIndexClient(indexName);
 
-                var providerRequests = AzureSearchRequestBuilder.BuildRequest(request, indexName, documentType, availableFields, _azureSearchOptions.QueryParserType);
+                var providerRequests = _requestBuilder.BuildRequest(request, indexName, documentType, availableFields, _azureSearchOptions.QueryParserType);
                 var providerResponses = await Task.WhenAll(providerRequests.Select(r => indexClient.Documents.SearchAsync(r?.SearchText, r?.SearchParameters)));
 
                 // Copy aggregation ID from request to response

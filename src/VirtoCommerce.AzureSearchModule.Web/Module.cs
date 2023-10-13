@@ -21,6 +21,7 @@ namespace VirtoCommerce.AzureSearchModule.Web
             if (provider.EqualsInvariant("AzureSearch"))
             {
                 serviceCollection.Configure<AzureSearchOptions>(Configuration.GetSection("Search:AzureSearch"));
+                serviceCollection.AddSingleton<IAzureSearchRequestBuilder, AzureSearchRequestBuilder>();
                 serviceCollection.AddSingleton<ISearchProvider, AzureSearchProvider>();
             }
         }

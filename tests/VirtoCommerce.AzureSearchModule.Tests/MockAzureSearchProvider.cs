@@ -8,14 +8,14 @@ using VirtoCommerce.SearchModule.Core.Model;
 
 namespace VirtoCommerce.AzureSearchModule.Tests
 {
-    public class MockAzureSearchProvider : AzureSearchModule.Data.AzureSearchProvider
+    public class MockAzureSearchProvider : AzureSearchProvider
     {
         static string IndexName = "TestIndex";
 
         public bool IsIndexExistsAsyncCalled { get; set; }
 
-        public MockAzureSearchProvider(IOptions<AzureSearchOptions> azureSearchOptions, IOptions<SearchOptions> searchOptions, ISettingsManager settingsManager) :
-            base(azureSearchOptions, searchOptions, settingsManager)
+        public MockAzureSearchProvider(IOptions<AzureSearchOptions> azureSearchOptions, IOptions<SearchOptions> searchOptions, ISettingsManager settingsManager, IAzureSearchRequestBuilder requestBuilder) :
+            base(azureSearchOptions, searchOptions, settingsManager, requestBuilder)
         {
             IsIndexExistsAsyncCalled = false;
         }

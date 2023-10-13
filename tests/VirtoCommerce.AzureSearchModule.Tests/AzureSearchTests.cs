@@ -12,6 +12,8 @@ namespace VirtoCommerce.AzureSearchModule.Tests
     [Trait("Category", "IntegrationTest")]
     public class AzureSearchTests : SearchProviderTests
     {
+        private readonly IAzureSearchRequestBuilder _requestBuilder = new AzureSearchRequestBuilder();
+
         protected virtual IOptions<SearchOptions> GetSearchOptions()
         {
             return Options.Create(new SearchOptions { Scope = "test-core", Provider = "AzureSearch" });
@@ -30,14 +32,14 @@ namespace VirtoCommerce.AzureSearchModule.Tests
             var azureSearchOptions = GetAzureSearchOptions();
             var options = GetSearchOptions();
 
-            var provider = new AzureSearchProvider(azureSearchOptions, options, GetSettingsManager());
+            var provider = new AzureSearchProvider(azureSearchOptions, options, GetSettingsManager(), _requestBuilder);
             return provider;
         }
 
         [Fact]
         public virtual async Task CheckCallIsIndexExists()
         {
-            var provider = new MockAzureSearchProvider(GetAzureSearchOptions(), GetSearchOptions(), GetSettingsManager());
+            var provider = new MockAzureSearchProvider(GetAzureSearchOptions(), GetSearchOptions(), GetSettingsManager(), _requestBuilder);
 
             Assert.Null(provider.CallGetMappingFromCache());
 
