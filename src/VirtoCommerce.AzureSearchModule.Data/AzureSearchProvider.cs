@@ -357,6 +357,11 @@ namespace VirtoCommerce.AzureSearchModule.Data
 
         protected virtual async Task<IndexingResult> IndexWithRetryAsync(string indexName, IEnumerable<SearchDocument> providerDocuments, int retryCount, bool partialUpdate)
         {
+            if (!providerDocuments.Any())
+            {
+                return new IndexingResult { Items = Array.Empty<IndexingResultItem>() };
+            }
+
             IndexingResult result = null;
 
             var batch = partialUpdate ? IndexBatch.MergeOrUpload(providerDocuments) : IndexBatch.Upload(providerDocuments);
