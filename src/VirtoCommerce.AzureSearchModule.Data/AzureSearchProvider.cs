@@ -124,6 +124,12 @@ namespace VirtoCommerce.AzureSearchModule.Data
             try
             {
                 var availableFields = await GetMappingAsync(indexName);
+
+                if (availableFields.IsNullOrEmpty())
+                {
+                    return new SearchResponse();
+                }
+
                 var indexClient = GetSearchIndexClient(indexName);
 
                 var providerRequests = _requestBuilder.BuildRequest(request, indexName, documentType, availableFields, _azureSearchOptions.QueryParserType);
