@@ -10,7 +10,7 @@ namespace VirtoCommerce.AzureSearchModule.Tests
 {
     public class MockAzureSearchProvider : AzureSearchProvider
     {
-        static string IndexName = "TestIndex";
+        private const string _indexName = "TestIndex";
 
         public bool IsIndexExistsAsyncCalled { get; set; }
 
@@ -33,13 +33,12 @@ namespace VirtoCommerce.AzureSearchModule.Tests
 
         public Task<IList<Field>> CallGetMappingAsync()
         {
-            return GetMappingAsync(IndexName);
+            return GetMappingAsync(_indexName);
         }
 
         public IList<Field> CallGetMappingFromCache()
         {
-            return GetMappingFromCache(IndexName);
+            return GetMappingFromCache(_indexName);
         }
-
     }
 }

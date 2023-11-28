@@ -39,7 +39,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
                 {
                     foreach (var fieldGroup in filterGroup.GroupBy(f => f.FieldName))
                     {
-                        BuildRequiestForFieldGroup(request, queryParserType, result, searchText, filterGroup, fieldGroup);
+                        BuildRequestForFieldGroup(request, queryParserType, result, searchText, filterGroup, fieldGroup);
                     }
                 }
             }
@@ -67,7 +67,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
             }
         }
 
-        protected virtual void BuildRequiestForFieldGroup(SearchRequest request, QueryType queryParserType, List<AzureSearchRequest> result, string searchText, IGrouping<string, AzureFacetRequest> filterGroup, IGrouping<string, AzureFacetRequest> fieldGroup)
+        protected virtual void BuildRequestForFieldGroup(SearchRequest request, QueryType queryParserType, List<AzureSearchRequest> result, string searchText, IGrouping<string, AzureFacetRequest> filterGroup, IGrouping<string, AzureFacetRequest> fieldGroup)
         {
             if (string.IsNullOrEmpty(fieldGroup.Key))
             {
@@ -118,10 +118,10 @@ namespace VirtoCommerce.AzureSearchModule.Data
         {
             if (request.IsFuzzySearch)
             {
-                return GetFuzzySearchText(request?.SearchKeywords, request.Fuzziness);
+                return GetFuzzySearchText(request.SearchKeywords, request.Fuzziness);
             }
 
-            return request?.SearchKeywords;
+            return request.SearchKeywords;
         }
 
         public virtual string GetFuzzySearchText(string searchKeywords, int? fuzzinessLevel)
@@ -240,7 +240,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
             var availableField = availableFields.Get(termFilter.FieldName);
             if (availableField != null)
             {
-                result = availableField.Type.ToString().StartsWith("Collection(")
+                result = availableField.IsCollection()
                     ? GetContainsFilterExpression(availableField, termFilter.Values)
                     : GetEqualsFilterExpression(availableField, termFilter.Values);
             }

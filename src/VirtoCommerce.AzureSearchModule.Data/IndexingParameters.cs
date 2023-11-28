@@ -1,6 +1,6 @@
 namespace VirtoCommerce.AzureSearchModule.Data
 {
-    public partial class IndexingParameters
+    public class IndexingParameters
     {
         public bool PartialUpdate { get; set; }
     }

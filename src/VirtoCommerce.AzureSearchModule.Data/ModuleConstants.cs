@@ -5,7 +5,7 @@ using VirtoCommerce.Platform.Core.Settings;
 namespace VirtoCommerce.AzureSearchModule.Data
 {
     [ExcludeFromCodeCoverage]
-    public class ModuleConstants
+    public static class ModuleConstants
     {
         public const string ProviderName = "AzureSearch";
 
