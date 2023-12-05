@@ -82,7 +82,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
                     Id = searchResult.AggregationId,
                     Values = new List<AggregationResponseValue>
                         {
-                            new AggregationResponseValue
+                            new()
                             {
                                 Id= searchResult.AggregationId,
                                 Count = searchResult.ProviderResponse.Count ?? 0,
@@ -120,7 +120,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
                 var azureFieldName = AzureSearchHelper.ToAzureFieldName(termAggregationRequest.FieldName);
                 if (!string.IsNullOrEmpty(azureFieldName))
                 {
-                    var facetResults = facets.ContainsKey(azureFieldName) ? facets[azureFieldName] : null;
+                    var facetResults = facets.TryGetValue(azureFieldName, out var facet) ? facet : null;
 
                     if (facetResults != null && facetResults.Any())
                     {
@@ -169,7 +169,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
                 var azureFieldName = AzureSearchHelper.ToAzureFieldName(rangeAggregationRequest.FieldName);
                 if (!string.IsNullOrEmpty(azureFieldName))
                 {
-                    var facetResults = facets.ContainsKey(azureFieldName) ? facets[azureFieldName] : null;
+                    var facetResults = facets.TryGetValue(azureFieldName, out var facet) ? facet : null;
 
                     if (facetResults != null && facetResults.Any())
                     {

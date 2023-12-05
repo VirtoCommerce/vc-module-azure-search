@@ -22,11 +22,15 @@ namespace VirtoCommerce.AzureSearchModule.Data
     public class AzureSearchProvider : ISearchProvider, ISupportPartialUpdate, ISupportSuggestions
     {
         public const string ContentAnalyzerName = "content_analyzer";
-        public const string NGramFilterName = "custom_ngram";
-        public const string EdgeNGramFilterName = "custom_edge_ngram";
+
+        [Obsolete("Use ModuleConstants.NGramFilterName", DiagnosticId = "VC0006", UrlFormat = "https://docs.virtocommerce.org/products/products-virto3-versions/")]
+        public const string NGramFilterName = ModuleConstants.NGramFilterName;
+
+        [Obsolete("Use ModuleConstants.EdgeNGramFilterName", DiagnosticId = "VC0006", UrlFormat = "https://docs.virtocommerce.org/products/products-virto3-versions/")]
+        public const string EdgeNGramFilterName = ModuleConstants.EdgeNGramFilterName;
 
         /// <summary>
-        /// Name of the default suggeser
+        /// Name of the default suggester
         /// </summary>
         protected const string SuggesterName = "default_suggester";
         protected const string SuggestFieldSuffix = "__suggest";
@@ -34,16 +38,20 @@ namespace VirtoCommerce.AzureSearchModule.Data
         private readonly AzureSearchOptions _azureSearchOptions;
         private readonly SearchOptions _searchOptions;
         private readonly ISettingsManager _settingsManager;
-        private readonly ConcurrentDictionary<string, IList<Field>> _mappings = new ConcurrentDictionary<string, IList<Field>>();
+        private readonly ConcurrentDictionary<string, IList<Field>> _mappings = new();
         private readonly IAzureSearchRequestBuilder _requestBuilder;
 
         public AzureSearchProvider(IOptions<AzureSearchOptions> azureSearchOptions, IOptions<SearchOptions> searchOptions, ISettingsManager settingsManager, IAzureSearchRequestBuilder requestBuilder)
         {
             if (azureSearchOptions == null)
+            {
                 throw new ArgumentNullException(nameof(azureSearchOptions));
+            }
 
             if (searchOptions == null)
+            {
                 throw new ArgumentNullException(nameof(searchOptions));
+            }
 
             _azureSearchOptions = azureSearchOptions.Value;
             _searchOptions = searchOptions.Value;
@@ -58,7 +66,9 @@ namespace VirtoCommerce.AzureSearchModule.Data
         public virtual async Task DeleteIndexAsync(string documentType)
         {
             if (string.IsNullOrEmpty(documentType))
+            {
                 throw new ArgumentNullException(nameof(documentType));
+            }
 
             try
             {
@@ -124,6 +134,12 @@ namespace VirtoCommerce.AzureSearchModule.Data
             try
             {
                 var availableFields = await GetMappingAsync(indexName);
+
+                if (availableFields.IsNullOrEmpty())
+                {
+                    return new SearchResponse();
+                }
+
                 var indexClient = GetSearchIndexClient(indexName);
 
                 var providerRequests = _requestBuilder.BuildRequest(request, indexName, documentType, availableFields, _azureSearchOptions.QueryParserType);
@@ -199,7 +215,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
                 }
                 catch (CloudException cloudException)
                 {
-                    ThrowExeption(cloudException, providerFields: providerFields);
+                    ThrowException(cloudException, providerFields: providerFields);
                 }
             }
 
@@ -216,9 +232,9 @@ namespace VirtoCommerce.AzureSearchModule.Data
         {
             var result = new SearchDocument { Id = document.Id };
 
-            if (!document.Fields.Any(x => x.Name == AzureSearchHelper.RawKeyFieldName))
+            if (document.Fields.All(x => x.Name != AzureSearchHelper.RawKeyFieldName))
             {
-                document.Fields.Insert(0, new IndexDocumentField(AzureSearchHelper.RawKeyFieldName, document.Id) { IsRetrievable = true, IsFilterable = true });
+                document.Fields.Insert(0, new IndexDocumentField(AzureSearchHelper.RawKeyFieldName, document.Id, IndexDocumentFieldValueType.String) { IsRetrievable = true, IsFilterable = true });
             }
 
             foreach (var field in document.Fields.OrderBy(f => f.Name))
@@ -252,7 +268,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
                     providerFieldType = isComplex ? DataType.String : providerFieldType; // transform DataType from complex to string
 
                     var providerField = AddProviderField(documentType, providerFields, fieldName, field, providerFieldType);
-                    var isCollection = providerField.Type.ToString().StartsWith("Collection(");
+                    var isCollection = providerField.IsCollection();
 
                     if (!FieldTypeMatch(providerFieldType, providerField.Type))
                     {
@@ -387,7 +403,9 @@ namespace VirtoCommerce.AzureSearchModule.Data
             if (field.ValueType == IndexDocumentFieldValueType.Undefined)
             {
                 var originalFieldType = field.Value?.GetType() ?? typeof(object);
+#pragma warning disable CS0618 // Type or member is obsolete
                 providerFieldType = GetProviderFieldType(documentType, fieldName, originalFieldType);
+#pragma warning restore CS0618 // Type or member is obsolete
             }
             else
             {
@@ -397,23 +415,43 @@ namespace VirtoCommerce.AzureSearchModule.Data
             return providerFieldType;
         }
 
-        [Obsolete("Left for backwards compatability.")]
+        [Obsolete("Left for backwards compatibility.")]
         protected virtual DataType GetProviderFieldType(string documentType, string fieldName, Type fieldType)
         {
             if (fieldType == typeof(string))
+            {
                 return DataType.String;
+            }
+
             if (fieldType == typeof(int))
+            {
                 return DataType.Int32;
+            }
+
             if (fieldType == typeof(long))
+            {
                 return DataType.Int64;
+            }
+
             if (fieldType == typeof(double) || fieldType == typeof(decimal))
+            {
                 return DataType.Double;
+            }
+
             if (fieldType == typeof(bool))
+            {
                 return DataType.Boolean;
+            }
+
             if (fieldType == typeof(DateTimeOffset) || fieldType == typeof(DateTime))
+            {
                 return DataType.DateTimeOffset;
+            }
+
             if (fieldType == typeof(GeoPoint))
+            {
                 return DataType.GeographyPoint;
+            }
 
             throw new ArgumentException($"Field {fieldName} has unsupported type {fieldType}", nameof(fieldType));
         }
@@ -447,8 +485,11 @@ namespace VirtoCommerce.AzureSearchModule.Data
             }
         }
 
-        protected virtual async Task<IndexingResult> IndexWithRetryAsync(string indexName, IEnumerable<SearchDocument> providerDocuments, int retryCount, bool partialUpdate)
+        protected virtual async Task<IndexingResult> IndexWithRetryAsync(string indexName, IEnumerable<SearchDocument> providerDocumentsEnumerable, int retryCount, bool partialUpdate)
         {
+            // Avoid multiple enumeration. Need to change argument type to IList<SearchDocument>.
+            var providerDocuments = providerDocumentsEnumerable as IList<SearchDocument> ?? providerDocumentsEnumerable.ToList();
+
             if (!providerDocuments.Any())
             {
                 return new IndexingResult { Items = Array.Empty<IndexingResultItem>() };
@@ -481,7 +522,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
                 }
                 catch (CloudException cloudException)
                 {
-                    ThrowExeption(cloudException, providerDocuments: providerDocuments);
+                    ThrowException(cloudException, providerDocuments: providerDocuments);
                 }
             }
 
@@ -537,8 +578,8 @@ namespace VirtoCommerce.AzureSearchModule.Data
                 Fields = providerFields.OrderBy(f => f.Name).ToArray(),
                 TokenFilters = new TokenFilter[]
                 {
-                    new NGramTokenFilterV2(NGramFilterName, minGram, maxGram),
-                    new EdgeNGramTokenFilterV2(EdgeNGramFilterName, minGram, maxGram)
+                    new NGramTokenFilterV2(ModuleConstants.NGramFilterName, minGram, maxGram),
+                    new EdgeNGramTokenFilterV2(ModuleConstants.EdgeNGramFilterName, minGram, maxGram)
                 },
                 Analyzers = new Analyzer[]
                 {
@@ -567,7 +608,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
             if (suggestSourceFields.Any())
             {
                 var suggester = new Suggester(SuggesterName, suggestSourceFields);
-                index.Suggesters = new Suggester[] { suggester };
+                index.Suggesters = new[] { suggester };
             }
 
             return index;
@@ -575,17 +616,17 @@ namespace VirtoCommerce.AzureSearchModule.Data
 
         protected virtual string GetTokenFilterName()
         {
-            return _settingsManager.GetValue("VirtoCommerce.Search.AzureSearch.TokenFilter", EdgeNGramFilterName);
+            return _settingsManager.GetValue<string>(ModuleConstants.Settings.Indexing.TokenFilter);
         }
 
         protected virtual int GetMinGram()
         {
-            return _settingsManager.GetValue("VirtoCommerce.Search.AzureSearch.NGramTokenFilter.MinGram", 1);
+            return _settingsManager.GetValue<int>(ModuleConstants.Settings.Indexing.MinGram);
         }
 
         protected virtual int GetMaxGram()
         {
-            return _settingsManager.GetValue("VirtoCommerce.Search.AzureSearch.NGramTokenFilter.MaxGram", 20);
+            return _settingsManager.GetValue<int>(ModuleConstants.Settings.Indexing.MaxGram);
         }
 
         #endregion
@@ -617,13 +658,13 @@ namespace VirtoCommerce.AzureSearchModule.Data
             }
             catch (CloudException cloudException)
             {
-                ThrowExeption(cloudException, providerFields: providerFields);
+                ThrowException(cloudException, providerFields: providerFields);
             }
         }
 
         protected virtual IList<Field> GetMappingFromCache(string indexName)
         {
-            return _mappings.ContainsKey(indexName) ? _mappings[indexName] : null;
+            return _mappings.TryGetValue(indexName, out var mapping) ? mapping : null;
         }
 
         protected virtual void AddMappingToCache(string indexName, IList<Field> providerFields)
@@ -643,7 +684,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
             throw new SearchException($"{message}. Search service name: {_azureSearchOptions.SearchServiceName}, Scope: {_searchOptions.Scope}", innerException);
         }
 
-        private void ThrowExeption(CloudException cloudException, IList<Field> providerFields = null, IEnumerable<SearchDocument> providerDocuments = null)
+        private void ThrowException(CloudException cloudException, IList<Field> providerFields = null, IEnumerable<SearchDocument> providerDocuments = null)
         {
             var error = WrapCloudExceptionMessage(cloudException);
 
@@ -655,7 +696,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
 
             if (providerFields != null)
             {
-                var fieldNames = GetFieldNames(providerFields);
+                var fieldNames = string.Join(',', providerFields.Select(x => x.Name));
                 error = $"{error}; FieldNames:{fieldNames}";
             }
 
@@ -678,18 +719,13 @@ namespace VirtoCommerce.AzureSearchModule.Data
         /// </summary>
         protected virtual string WrapCloudExceptionMessage(CloudException exception)
         {
-            if (exception.Response?.Content?.IsNullOrEmpty() == false)
+            if (string.IsNullOrEmpty(exception.Response?.Content))
             {
-                var unescapedContent = Regex.Unescape(exception?.Response?.Content);
-                return $"StatusCode: {exception?.Response?.StatusCode}; Content:{unescapedContent}";
+                return exception.ToString();
             }
 
-            return exception.ToString();
-        }
-
-        private string GetFieldNames(IList<Field> providerFields)
-        {
-            return string.Join(',', providerFields.Select(x => x.Name));
+            var unescapedContent = Regex.Unescape(exception.Response.Content);
+            return $"StatusCode: {exception.Response.StatusCode}; Content:{unescapedContent}";
         }
     }
 }

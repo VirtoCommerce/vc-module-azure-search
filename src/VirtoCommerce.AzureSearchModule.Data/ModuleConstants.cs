@@ -1,42 +1,47 @@
 using System.Collections.Generic;
-using VirtoCommerce.Platform.Core.Settings;
 using System.Diagnostics.CodeAnalysis;
+using VirtoCommerce.Platform.Core.Settings;
 
-namespace VirtoCommerce.AzureSearchModule.Web
+namespace VirtoCommerce.AzureSearchModule.Data
 {
     [ExcludeFromCodeCoverage]
-    public class ModuleConstants
+    public static class ModuleConstants
     {
+        public const string ProviderName = "AzureSearch";
+
+        public const string NGramFilterName = "custom_ngram";
+        public const string EdgeNGramFilterName = "custom_edge_ngram";
+
         public static class Settings
         {
             public static class Indexing
             {
-                private static readonly SettingDescriptor TokenFilter = new SettingDescriptor
+                public static SettingDescriptor TokenFilter { get; } = new()
                 {
                     Name = "VirtoCommerce.Search.AzureSearch.TokenFilter",
                     GroupName = "Search|Azure Search",
                     ValueType = SettingValueType.ShortText,
-                    DefaultValue = "custom_edge_ngram",
-                    AllowedValues = new object[] { "custom_edge_ngram", "custom_ngram" }
+                    DefaultValue = EdgeNGramFilterName,
+                    AllowedValues = new object[] { EdgeNGramFilterName, NGramFilterName },
                 };
 
-                private static readonly SettingDescriptor MinGram = new SettingDescriptor
+                public static SettingDescriptor MinGram { get; } = new()
                 {
                     Name = "VirtoCommerce.Search.AzureSearch.NGramTokenFilter.MinGram",
                     GroupName = "Search|Azure Search",
                     ValueType = SettingValueType.Integer,
-                    DefaultValue = 1
+                    DefaultValue = 1,
                 };
 
-                private static readonly SettingDescriptor MaxGram = new SettingDescriptor
+                public static SettingDescriptor MaxGram { get; } = new()
                 {
                     Name = "VirtoCommerce.Search.AzureSearch.NGramTokenFilter.MaxGram",
                     GroupName = "Search|Azure Search",
                     ValueType = SettingValueType.Integer,
-                    DefaultValue = 20
+                    DefaultValue = 20,
                 };
 
-                public static IEnumerable<SettingDescriptor> AllSettings
+                public static IEnumerable<SettingDescriptor> AllIndexingSettings
                 {
                     get
                     {
@@ -47,8 +52,7 @@ namespace VirtoCommerce.AzureSearchModule.Web
                 }
             }
 
-            public static IEnumerable<SettingDescriptor> AllSettings => Indexing.AllSettings;
+            public static IEnumerable<SettingDescriptor> AllSettings => Indexing.AllIndexingSettings;
         }
     }
 }
-
