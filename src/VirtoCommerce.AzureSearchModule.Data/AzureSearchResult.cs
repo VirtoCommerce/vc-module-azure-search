@@ -1,4 +1,3 @@
-using System;
 using Microsoft.Azure.Search.Models;
 
 namespace VirtoCommerce.AzureSearchModule.Data
