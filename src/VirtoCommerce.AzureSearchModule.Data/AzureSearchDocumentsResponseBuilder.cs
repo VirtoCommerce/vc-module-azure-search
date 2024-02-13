@@ -1,35 +1,47 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.Azure.Search.Models;
+using Azure.Search.Documents.Models;
 using VirtoCommerce.Platform.Core.Common;
 using VirtoCommerce.SearchModule.Core.Model;
-using FacetResults = System.Collections.Generic.IDictionary<string, System.Collections.Generic.IList<Microsoft.Azure.Search.Models.FacetResult>>;
+using FacetResults = System.Collections.Generic.IDictionary<string, System.Collections.Generic.IList<Azure.Search.Documents.Models.FacetResult>>;
 
 namespace VirtoCommerce.AzureSearchModule.Data
 {
-    [Obsolete("Use AzureSearchDocumentsResponseBuilder", DiagnosticId = "VC0006", UrlFormat = "https://docs.virtocommerce.org/products/products-virto3-versions/")]
-    public static class AzureSearchResponseBuilder
+    public interface IAzureSearchDocumentsResponseBuilder
     {
-        public static SearchResponse ToSearchResponse(this IList<AzureSearchResult> searchResults, SearchRequest request, string documentType)
+        SearchResponse ToSearchResponse(IList<AzureSearchResult> searchResults, SearchRequest request, string documentType);
+    }
+
+    public class AzureSearchDocumentsResponseBuilder : IAzureSearchDocumentsResponseBuilder
+    {
+        public SearchResponse ToSearchResponse(IList<AzureSearchResult> searchResults, SearchRequest request, string documentType)
         {
-            var primaryResponse = searchResults.First().ProviderResponse;
+            var primaryResponse = searchResults.First().SearchDocumentResponse.Value;
 
             var result = new SearchResponse
             {
-                TotalCount = primaryResponse.Count ?? 0,
-                Documents = primaryResponse.Results.Select(ToSearchDocument).ToArray(),
-                Aggregations = GetAggregations(searchResults, request)
+                TotalCount = primaryResponse.TotalCount ?? 0,
+                Aggregations = GetAggregations(searchResults, request),
             };
+
+            var documents = new List<SearchModule.Core.Model.SearchDocument>();
+            foreach (var resultDocument in primaryResponse.GetResults())
+            {
+                var searchDocument = ToSearchDocument(resultDocument.Document);
+                documents.Add(searchDocument);
+            }
+
+            result.Documents = documents;
 
             return result;
         }
 
-        public static SearchDocument ToSearchDocument(SearchResult<Document> searchResult)
+        public SearchModule.Core.Model.SearchDocument ToSearchDocument(Azure.Search.Documents.Models.SearchDocument searchResult)
         {
-            var result = new SearchDocument();
+            var result = new SearchModule.Core.Model.SearchDocument();
 
-            foreach (var (docKey, docValue) in searchResult.Document)
+            foreach (var (docKey, docValue) in searchResult)
             {
                 var key = AzureSearchHelper.FromAzureFieldName(docKey);
 
@@ -59,10 +71,10 @@ namespace VirtoCommerce.AzureSearchModule.Data
             var result = new List<AggregationResponse>();
 
             // Combine facets from all responses to a single FacetResults
-            var facetResults = searchResults.Where(r => r.ProviderResponse.Facets != null).SelectMany(r => r.ProviderResponse.Facets).ToList();
+            var facetResults = searchResults.Select(x => x.SearchDocumentResponse).Where(r => r.Value?.Facets != null).SelectMany(r => r.Value.Facets).ToList();
             if (facetResults.Any())
             {
-                var facets = new Dictionary<string, IList<FacetResult>>();
+                var facets = new Dictionary<string, IList<Azure.Search.Documents.Models.FacetResult>>();
                 foreach (var keyValuePair in facetResults)
                 {
                     facets[keyValuePair.Key] = keyValuePair.Value;
@@ -76,7 +88,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
             }
 
             // Add responses for aggregations with empty field name
-            foreach (var searchResult in searchResults.Where(r => !string.IsNullOrEmpty(r.AggregationId) && r.ProviderResponse.Count > 0))
+            foreach (var searchResult in searchResults.Where(r => !string.IsNullOrEmpty(r.AggregationId) && r.SearchDocumentResponse.Value.TotalCount > 0))
             {
                 result.Add(new AggregationResponse
                 {
@@ -85,8 +97,8 @@ namespace VirtoCommerce.AzureSearchModule.Data
                         {
                             new()
                             {
-                                Id= searchResult.AggregationId,
-                                Count = searchResult.ProviderResponse.Count ?? 0,
+                                Id = searchResult.AggregationId,
+                                Count = searchResult.SearchDocumentResponse.Value.TotalCount ?? 0,
                             }
                         }
                 });

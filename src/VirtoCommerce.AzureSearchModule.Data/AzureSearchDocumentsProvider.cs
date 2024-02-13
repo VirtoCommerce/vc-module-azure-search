@@ -2,33 +2,29 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
+using System.Net;
 using System.Threading.Tasks;
-using Microsoft.Azure.Search;
-using Microsoft.Azure.Search.Models;
+using Azure;
+using Azure.Search.Documents;
+using Azure.Search.Documents.Indexes;
+using Azure.Search.Documents.Indexes.Models;
+using Azure.Search.Documents.Models;
 using Microsoft.Extensions.Options;
-using Microsoft.Rest.Azure;
+using VirtoCommerce.AzureSearchModule.Data.Extensions;
 using VirtoCommerce.Platform.Core.Common;
 using VirtoCommerce.Platform.Core.Settings;
 using VirtoCommerce.SearchModule.Core.Exceptions;
 using VirtoCommerce.SearchModule.Core.Model;
 using VirtoCommerce.SearchModule.Core.Services;
-using DataType = Microsoft.Azure.Search.Models.DataType;
-using Index = Microsoft.Azure.Search.Models.Index;
 using IndexingResult = VirtoCommerce.SearchModule.Core.Model.IndexingResult;
+using SearchDocument = Azure.Search.Documents.Models.SearchDocument;
+using SearchOptions = VirtoCommerce.SearchModule.Core.Model.SearchOptions;
 
 namespace VirtoCommerce.AzureSearchModule.Data
 {
-    [Obsolete("Use AzureSearchDocumentsProvider")]
-    public class AzureSearchProvider : ISearchProvider, ISupportPartialUpdate, ISupportSuggestions
+    public class AzureSearchDocumentsProvider : ISearchProvider, ISupportPartialUpdate, ISupportSuggestions
     {
         public const string ContentAnalyzerName = "content_analyzer";
-
-        [Obsolete("Use ModuleConstants.NGramFilterName", DiagnosticId = "VC0006", UrlFormat = "https://docs.virtocommerce.org/products/products-virto3-versions/")]
-        public const string NGramFilterName = ModuleConstants.NGramFilterName;
-
-        [Obsolete("Use ModuleConstants.EdgeNGramFilterName", DiagnosticId = "VC0006", UrlFormat = "https://docs.virtocommerce.org/products/products-virto3-versions/")]
-        public const string EdgeNGramFilterName = ModuleConstants.EdgeNGramFilterName;
 
         /// <summary>
         /// Name of the default suggester
@@ -36,33 +32,32 @@ namespace VirtoCommerce.AzureSearchModule.Data
         protected const string SuggesterName = "default_suggester";
         protected const string SuggestFieldSuffix = "__suggest";
 
+        private readonly ConcurrentDictionary<string, IList<SearchField>> _mappings = new();
+
         private readonly AzureSearchOptions _azureSearchOptions;
         private readonly SearchOptions _searchOptions;
         private readonly ISettingsManager _settingsManager;
-        private readonly ConcurrentDictionary<string, IList<Field>> _mappings = new();
-        private readonly IAzureSearchRequestBuilder _requestBuilder;
+        private readonly IAzureSearchDocumentsRequestBuilder _requestBuilder;
+        private readonly IAzureSearchDocumentsResponseBuilder _responseBuilder;
 
-        public AzureSearchProvider(IOptions<AzureSearchOptions> azureSearchOptions, IOptions<SearchOptions> searchOptions, ISettingsManager settingsManager, IAzureSearchRequestBuilder requestBuilder)
+        public AzureSearchDocumentsProvider(
+            IOptions<AzureSearchOptions> azureSearchOptions,
+            IOptions<SearchOptions> searchOptions,
+            ISettingsManager settingsManager,
+            IAzureSearchDocumentsRequestBuilder requestBuilder,
+            IAzureSearchDocumentsResponseBuilder responseBuilder)
         {
-            if (azureSearchOptions == null)
-            {
-                throw new ArgumentNullException(nameof(azureSearchOptions));
-            }
-
-            if (searchOptions == null)
-            {
-                throw new ArgumentNullException(nameof(searchOptions));
-            }
-
             _azureSearchOptions = azureSearchOptions.Value;
             _searchOptions = searchOptions.Value;
-
-            _settingsManager = settingsManager ?? throw new ArgumentNullException(nameof(settingsManager));
+            _settingsManager = settingsManager;
             _requestBuilder = requestBuilder;
+            _responseBuilder = responseBuilder;
+            _azureKeyCredential = new AzureKeyCredential(_azureSearchOptions.Key);
         }
 
-        private SearchServiceClient _client;
-        protected SearchServiceClient Client => _client ??= CreateSearchServiceClient();
+        private readonly AzureKeyCredential _azureKeyCredential;
+        private SearchIndexClient _client;
+        protected SearchIndexClient Client => _client ??= GetSearchIndexClient();
 
         public virtual async Task DeleteIndexAsync(string documentType)
         {
@@ -77,12 +72,12 @@ namespace VirtoCommerce.AzureSearchModule.Data
 
                 if (await IndexExistsAsync(indexName))
                 {
-                    await Client.Indexes.DeleteAsync(indexName);
+                    await Client.DeleteIndexAsync(indexName);
                 }
 
                 RemoveMappingFromCache(indexName);
             }
-            catch (Exception ex)
+            catch (RequestFailedException ex)
             {
                 ThrowException("Failed to delete index", ex);
             }
@@ -109,17 +104,19 @@ namespace VirtoCommerce.AzureSearchModule.Data
             try
             {
                 var indexName = GetIndexName(documentType);
-                var indexClient = GetSearchIndexClient(indexName);
                 var providerDocuments = documents.Select(document => ConvertToProviderDocument(document, null, documentType)).ToList();
-                var batch = IndexBatch.Delete(providerDocuments);
 
-                var response = await indexClient.Documents.IndexAsync(batch);
-                result = CreateIndexingResult(response.Results);
+                var batch = IndexDocumentsBatch.Delete("Id", documents.Select(x => x.Id).ToList());
+
+                var indexClient = GetSearchIndexClient(indexName);
+                var response = await indexClient.IndexDocumentsAsync(batch);
+
+                result = CreateIndexingResult(response.Value.Results);
             }
-            catch (IndexBatchException ex)
-            {
-                result = CreateIndexingResult(ex.IndexingResults);
-            }
+            //catch (RequestFailedException ex)
+            //{
+            //    result = CreateIndexingResult(ex.IndexingResults);
+            //}
             catch (Exception ex)
             {
                 throw new SearchException(ex.Message, ex);
@@ -136,25 +133,30 @@ namespace VirtoCommerce.AzureSearchModule.Data
             {
                 var availableFields = await GetMappingAsync(indexName);
 
+                var result = new SearchResponse();
                 if (availableFields.IsNullOrEmpty())
                 {
-                    return new SearchResponse();
+                    return result;
                 }
 
-                var indexClient = GetSearchIndexClient(indexName);
+                var searchClient = GetSearchIndexClient(indexName);
 
-                var providerRequests = _requestBuilder.BuildRequest(request, indexName, documentType, availableFields, QueryType.Simple);
-                var providerResponses = await Task.WhenAll(providerRequests.Select(r => indexClient.Documents.SearchAsync(r?.SearchText, r?.SearchParameters)));
+                var providerRequests = _requestBuilder.BuildRequest(request, indexName, documentType, availableFields, _azureSearchOptions.QueryParserType);
+                var providerResponses = await Task.WhenAll(providerRequests.Select(r => searchClient.SearchAsync<SearchDocument>(r.SearchText, r.SearchOptions)));
 
                 // Copy aggregation ID from request to response
-                var searchResults = providerResponses.Select((response, i) => new AzureSearchResult
+                var searchResults = providerResponses.Select((response, i) =>
                 {
-                    AggregationId = providerRequests[i].AggregationId,
-                    ProviderResponse = response,
+                    return new AzureSearchResult
+                    {
+                        AggregationId = providerRequests[i].AggregationId,
+                        SearchDocumentResponse = response,
+                    };
                 })
                 .ToArray();
 
-                var result = searchResults.ToSearchResponse(request, documentType);
+                result = _responseBuilder.ToSearchResponse(searchResults, request, documentType);
+
                 return result;
             }
             catch (Exception ex)
@@ -178,14 +180,15 @@ namespace VirtoCommerce.AzureSearchModule.Data
 
                 var indexClient = GetSearchIndexClient(indexName);
 
-                var suggestParameters = new SuggestParameters
+                var suggestParameters = new SuggestOptions
                 {
-                    Top = request.Size,
+                    Size = request.Size,
                 };
 
-                var suggestResult = await indexClient.Documents.SuggestAsync(request.Query, SuggesterName, suggestParameters);
+                var suggestResult = await indexClient.SuggestAsync<SearchDocument>(request.Query, SuggesterName, suggestParameters);
 
-                result.Suggestions = suggestResult.Results.Select(x => x.Text).ToList();
+                //todo:
+                //result.Suggestions = suggestResult.Results.Select(x => x.Text).ToList();
             }
             catch (Exception ex)
             {
@@ -214,24 +217,24 @@ namespace VirtoCommerce.AzureSearchModule.Data
                 {
                     await CreateIndex(indexName, providerFields);
                 }
-                catch (CloudException cloudException)
+                catch (RequestFailedException exception)
                 {
-                    ThrowException(cloudException, providerFields: providerFields);
+                    ThrowException(exception, providerFields: providerFields);
                 }
             }
 
             if (updateMapping)
             {
-                UpdateMapping(indexName, providerFields);
+                await UpdateMapping(indexName, providerFields);
             }
 
             var result = await IndexWithRetryAsync(indexName, providerDocuments, 10, parameters.PartialUpdate);
             return result;
         }
 
-        protected virtual SearchDocument ConvertToProviderDocument(IndexDocument document, IList<Field> providerFields, string documentType)
+        protected virtual SearchDocument ConvertToProviderDocument(IndexDocument document, IList<SearchField> providerFields, string documentType)
         {
-            var result = new SearchDocument { Id = document.Id };
+            var result = new SearchModule.Core.Model.SearchDocument { Id = document.Id };
 
             if (document.Fields.All(x => x.Name != AzureSearchHelper.RawKeyFieldName))
             {
@@ -264,9 +267,9 @@ namespace VirtoCommerce.AzureSearchModule.Data
                 {
                     var providerFieldType = GetProviderFieldType(documentType, field.Name, field);
 
-                    var isGeoPoint = providerFieldType == DataType.GeographyPoint;
-                    var isComplex = providerFieldType == DataType.Complex;
-                    providerFieldType = isComplex ? DataType.String : providerFieldType; // transform DataType from complex to string
+                    var isGeoPoint = providerFieldType == SearchFieldDataType.GeographyPoint;
+                    var isComplex = providerFieldType == SearchFieldDataType.Complex;
+                    providerFieldType = isComplex ? SearchFieldDataType.String : providerFieldType; // transform DataType from complex to string
 
                     var providerField = AddProviderField(documentType, providerFields, fieldName, field, providerFieldType);
                     var isCollection = providerField.IsCollection();
@@ -282,18 +285,18 @@ namespace VirtoCommerce.AzureSearchModule.Data
                 }
             }
 
-            return result;
+            return new SearchDocument(result);
         }
 
-        private static bool FieldTypeMatch(DataType documentFieldType, DataType schemaFieldType)
+        private static bool FieldTypeMatch(SearchFieldDataType documentFieldType, SearchFieldDataType schemaFieldType)
         {
             // integer literal can be converted to double in schema
-            if ((documentFieldType == DataType.Int32 || documentFieldType == DataType.Int64) && schemaFieldType == DataType.Double)
+            if ((documentFieldType == SearchFieldDataType.Int32 || documentFieldType == SearchFieldDataType.Int64) && schemaFieldType == SearchFieldDataType.Double)
             {
                 return true;
             }
 
-            return documentFieldType == schemaFieldType || DataType.Collection(documentFieldType) == schemaFieldType;
+            return documentFieldType == schemaFieldType || SearchFieldDataType.Collection(documentFieldType) == schemaFieldType;
         }
 
         private static object GetFieldValue(IndexDocumentField field, bool isGeoPoint, bool isComplex, bool isCollection)
@@ -320,28 +323,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
             return value;
         }
 
-        [Obsolete("Use AddProviderField(string documentType, IList<Field> providerFields, string fieldName, IndexDocumentField field, DataType providerFieldType)")]
-        protected virtual Field AddProviderField(string documentType, IList<Field> providerFields, string fieldName, IndexDocumentField field)
-        {
-            var providerField = providerFields?.FirstOrDefault(f => f.Name == fieldName);
-
-            if (providerField == null)
-            {
-                providerField = CreateProviderField(documentType, fieldName, field);
-                providerFields?.Add(providerField);
-
-                // create a duplicate field for suggestions only
-                if (field.IsSuggestable)
-                {
-                    var suggestField = CreateProviderField(documentType, $"{fieldName}{SuggestFieldSuffix}", field);
-                    providerFields?.Add(suggestField);
-                }
-            }
-
-            return providerField;
-        }
-
-        protected virtual Field AddProviderField(string documentType, IList<Field> providerFields, string fieldName, IndexDocumentField field, DataType providerFieldType)
+        protected virtual SearchField AddProviderField(string documentType, IList<SearchField> providerFields, string fieldName, IndexDocumentField field, SearchFieldDataType providerFieldType)
         {
             var providerField = providerFields?.FirstOrDefault(f => f.Name == fieldName);
 
@@ -361,28 +343,21 @@ namespace VirtoCommerce.AzureSearchModule.Data
             return providerField;
         }
 
-        [Obsolete("Use CreateProviderField(string documentType, string fieldName, IndexDocumentField field, DataType providerFieldType)")]
-        protected virtual Field CreateProviderField(string documentType, string fieldName, IndexDocumentField field)
+        protected virtual SearchField CreateProviderField(string documentType, string fieldName, IndexDocumentField field, SearchFieldDataType providerFieldType)
         {
-            var providerFieldType = GetProviderFieldType(documentType, fieldName, field);
-            return CreateProviderField(documentType, fieldName, field, providerFieldType);
-        }
-
-        protected virtual Field CreateProviderField(string documentType, string fieldName, IndexDocumentField field, DataType providerFieldType)
-        {
-            var isGeoPoint = providerFieldType == DataType.GeographyPoint;
-            var isString = providerFieldType == DataType.String;
+            var isGeoPoint = providerFieldType == SearchFieldDataType.GeographyPoint;
+            var isString = providerFieldType == SearchFieldDataType.String;
             var isCollection = field.IsCollection && isString;
 
             if (isCollection)
             {
-                providerFieldType = DataType.Collection(providerFieldType);
+                providerFieldType = SearchFieldDataType.Collection(providerFieldType);
             }
 
-            var providerField = new Field(fieldName, providerFieldType)
+            var providerField = new SearchField(fieldName, providerFieldType)
             {
                 IsKey = fieldName == AzureSearchHelper.KeyFieldName,
-                IsRetrievable = field.IsRetrievable,
+                IsHidden = !field.IsRetrievable,
                 IsSearchable = isString && field.IsSearchable,
                 IsFilterable = field.IsFilterable,
                 IsFacetable = field.IsFilterable && !isGeoPoint,
@@ -391,22 +366,20 @@ namespace VirtoCommerce.AzureSearchModule.Data
 
             if (providerField.IsSearchable == true)
             {
-                providerField.IndexAnalyzer = ContentAnalyzerName;
-                providerField.SearchAnalyzer = AnalyzerName.StandardLucene;
+                providerField.IndexAnalyzerName = ContentAnalyzerName;
+                providerField.SearchAnalyzerName = LexicalAnalyzerName.StandardLucene;
             }
 
             return providerField;
         }
 
-        private DataType GetProviderFieldType(string documentType, string fieldName, IndexDocumentField field)
+        private SearchFieldDataType GetProviderFieldType(string documentType, string fieldName, IndexDocumentField field)
         {
-            DataType providerFieldType;
+            SearchFieldDataType providerFieldType;
             if (field.ValueType == IndexDocumentFieldValueType.Undefined)
             {
                 var originalFieldType = field.Value?.GetType() ?? typeof(object);
-#pragma warning disable CS0618 // Type or member is obsolete
                 providerFieldType = GetProviderFieldType(documentType, fieldName, originalFieldType);
-#pragma warning restore CS0618 // Type or member is obsolete
             }
             else
             {
@@ -416,89 +389,88 @@ namespace VirtoCommerce.AzureSearchModule.Data
             return providerFieldType;
         }
 
-        [Obsolete("Left for backwards compatibility.")]
-        protected virtual DataType GetProviderFieldType(string documentType, string fieldName, Type fieldType)
+        protected virtual SearchFieldDataType GetProviderFieldType(string documentType, string fieldName, Type fieldType)
         {
             if (fieldType == typeof(string))
             {
-                return DataType.String;
+                return SearchFieldDataType.String;
             }
 
             if (fieldType == typeof(int))
             {
-                return DataType.Int32;
+                return SearchFieldDataType.Int32;
             }
 
             if (fieldType == typeof(long))
             {
-                return DataType.Int64;
+                return SearchFieldDataType.Int64;
             }
 
             if (fieldType == typeof(double) || fieldType == typeof(decimal))
             {
-                return DataType.Double;
+                return SearchFieldDataType.Double;
             }
 
             if (fieldType == typeof(bool))
             {
-                return DataType.Boolean;
+                return SearchFieldDataType.Boolean;
             }
 
             if (fieldType == typeof(DateTimeOffset) || fieldType == typeof(DateTime))
             {
-                return DataType.DateTimeOffset;
+                return SearchFieldDataType.DateTimeOffset;
             }
 
             if (fieldType == typeof(GeoPoint))
             {
-                return DataType.GeographyPoint;
+                return SearchFieldDataType.GeographyPoint;
             }
 
             throw new ArgumentException($"Field {fieldName} has unsupported type {fieldType}", nameof(fieldType));
         }
 
-        protected virtual DataType GetProviderFieldType(string documentType, string fieldName, IndexDocumentFieldValueType fieldType)
+        protected virtual SearchFieldDataType GetProviderFieldType(string documentType, string fieldName, IndexDocumentFieldValueType fieldType)
         {
             switch (fieldType)
             {
                 case IndexDocumentFieldValueType.Char:
                 case IndexDocumentFieldValueType.String:
-                    return DataType.String;
+                    return SearchFieldDataType.String;
                 case IndexDocumentFieldValueType.Byte:
                 case IndexDocumentFieldValueType.Short:
                 case IndexDocumentFieldValueType.Integer:
-                    return DataType.Int32;
+                    return SearchFieldDataType.Int32;
                 case IndexDocumentFieldValueType.Long:
-                    return DataType.Int64;
+                    return SearchFieldDataType.Int64;
                 case IndexDocumentFieldValueType.Double:
                 case IndexDocumentFieldValueType.Decimal:
-                    return DataType.Double;
+                    return SearchFieldDataType.Double;
                 case IndexDocumentFieldValueType.Boolean:
-                    return DataType.Boolean;
+                    return SearchFieldDataType.Boolean;
                 case IndexDocumentFieldValueType.DateTime:
-                    return DataType.DateTimeOffset;
+                    return SearchFieldDataType.DateTimeOffset;
                 case IndexDocumentFieldValueType.GeoPoint:
-                    return DataType.GeographyPoint;
+                    return SearchFieldDataType.GeographyPoint;
                 case IndexDocumentFieldValueType.Complex:
-                    return DataType.Complex;
+                    return SearchFieldDataType.Complex;
                 default:
                     throw new ArgumentException($"Field {fieldName} has unsupported type {fieldType}", nameof(fieldType));
             }
         }
 
-        protected virtual async Task<IndexingResult> IndexWithRetryAsync(string indexName, IEnumerable<SearchDocument> providerDocumentsEnumerable, int retryCount, bool partialUpdate)
+        protected virtual async Task<IndexingResult> IndexWithRetryAsync(string indexName, List<SearchDocument> providerDocuments, int retryCount, bool partialUpdate)
         {
-            // Avoid multiple enumeration. Need to change argument type to IList<SearchDocument>.
-            var providerDocuments = providerDocumentsEnumerable as IList<SearchDocument> ?? providerDocumentsEnumerable.ToList();
-
-            if (!providerDocuments.Any())
+            if (providerDocuments.Count == 0)
             {
                 return new IndexingResult { Items = Array.Empty<IndexingResultItem>() };
             }
 
             IndexingResult result = null;
 
-            var batch = partialUpdate ? IndexBatch.MergeOrUpload(providerDocuments) : IndexBatch.Upload(providerDocuments);
+            ;
+
+            var batch = partialUpdate ? IndexDocumentsBatch.MergeOrUpload(providerDocuments) : IndexDocumentsBatch.Upload(providerDocuments);
+
             var indexClient = GetSearchIndexClient(indexName);
 
             // Retry if cannot index documents after updating the mapping
@@ -506,31 +478,36 @@ namespace VirtoCommerce.AzureSearchModule.Data
             {
                 try
                 {
-                    var response = await indexClient.Documents.IndexAsync(batch);
-                    result = CreateIndexingResult(response.Results);
+                    var response = await indexClient.IndexDocumentsAsync(batch, new IndexDocumentsOptions { ThrowOnAnyError = true });
+
+                    result = CreateIndexingResult(response.Value.Results);
                     break;
                 }
-                catch (IndexBatchException ex)
+                catch (Exception e)
                 {
-                    result = CreateIndexingResult(ex.IndexingResults);
-                    break;
+                    var e2 = e;
                 }
-                catch (CloudException cloudException)
-                    when (i > 0 && cloudException.Message.Contains("Make sure to only use property names that are defined by the type"))
-                {
-                    // Need to wait some time until new mapping is applied
-                    await Task.Delay(1000);
-                }
-                catch (CloudException cloudException)
-                {
-                    ThrowException(cloudException, providerDocuments: providerDocuments);
-                }
+                //catch (IndexBatchException ex)
+                //{
+                //    result = CreateIndexingResult(ex.IndexingResults);
+                //    break;
+                //}
+                //catch (CloudException cloudException)
+                //    when (i > 0 && cloudException.Message.Contains("Make sure to only use property names that are defined by the type"))
+                //{
+                //    // Need to wait some time until new mapping is applied
+                //    await Task.Delay(1000);
+                //}
+                //catch (CloudException cloudException)
+                //{
+                //    ThrowException(cloudException, providerDocuments: providerDocuments);
+                //}
             }
 
             return result;
         }
 
-        protected virtual IndexingResult CreateIndexingResult(IEnumerable<Microsoft.Azure.Search.Models.IndexingResult> results)
+        protected virtual IndexingResult CreateIndexingResult(IEnumerable<Azure.Search.Documents.Models.IndexingResult> results)
         {
             return new IndexingResult
             {
@@ -549,49 +526,55 @@ namespace VirtoCommerce.AzureSearchModule.Data
             return string.Join("-", _searchOptions.GetScope(documentType), documentType).ToLowerInvariant();
         }
 
-        protected virtual Task<bool> IndexExistsAsync(string indexName)
+        protected virtual async Task<bool> IndexExistsAsync(string indexName)
         {
-            return Client.Indexes.ExistsAsync(indexName);
+            var result = false;
+
+            try
+            {
+                await Client.GetIndexAsync(indexName);
+                result = true;
+            }
+            catch (RequestFailedException ex) when (ex.Status == (int)HttpStatusCode.NotFound)
+            {
+                // index not found
+            }
+
+            return result;
         }
 
-        protected virtual async Task<IList<Field>> GetIndexFields(string indexName)
+        protected virtual async Task<IList<SearchField>> GetIndexFields(string indexName)
         {
-            var index = await Client.Indexes.GetAsync(indexName);
-            return index.Fields;
+            var index = await Client.GetIndexAsync(indexName);
+            return index.Value.Fields;
         }
 
         #region Create and configure index
 
-        protected virtual Task CreateIndex(string indexName, IList<Field> providerFields)
+        protected virtual Task CreateIndex(string indexName, IList<SearchField> providerFields)
         {
             var index = CreateIndexDefinition(indexName, providerFields);
-            return Client.Indexes.CreateAsync(index);
+            return Client.CreateIndexAsync(index);
         }
 
-        protected virtual Index CreateIndexDefinition(string indexName, IList<Field> providerFields)
+        protected virtual SearchIndex CreateIndexDefinition(string indexName, IList<SearchField> providerFields)
         {
-            var minGram = GetMinGram();
-            var maxGram = GetMaxGram();
+            var minGram = _settingsManager.GetMinGram();
+            var maxGram = _settingsManager.GetMaxGram();
 
-            var index = new Index
+            var index = new SearchIndex(indexName)
             {
-                Name = indexName,
-                Fields = providerFields.OrderBy(f => f.Name).ToArray(),
-                TokenFilters = new TokenFilter[]
-                {
-                    new NGramTokenFilterV2(ModuleConstants.NGramFilterName, minGram, maxGram),
-                    new EdgeNGramTokenFilterV2(ModuleConstants.EdgeNGramFilterName, minGram, maxGram)
-                },
-                Analyzers = new Analyzer[]
-                {
-                    new CustomAnalyzer
-                    {
-                        Name = ContentAnalyzerName,
-                        Tokenizer = TokenizerName.Standard,
-                        TokenFilters = new[] { TokenFilterName.Lowercase, GetTokenFilterName() }
-                    }
-                },
+                Fields = providerFields.OrderBy(f => f.Name).ToList()
             };
+
+            index.TokenFilters.Add(new NGramTokenFilter(ModuleConstants.NGramFilterName) { MinGram = minGram, MaxGram = maxGram });
+            index.TokenFilters.Add(new EdgeNGramTokenFilter(ModuleConstants.EdgeNGramFilterName) { MinGram = minGram, MaxGram = maxGram });
+
+            var customAnalyzer = new CustomAnalyzer(ContentAnalyzerName, LexicalTokenizerName.Standard);
+            customAnalyzer.TokenFilters.Add(TokenFilterName.Lowercase);
+            customAnalyzer.TokenFilters.Add(new TokenFilterName(_settingsManager.GetTokenFilterName()));
+
+            index.Analyzers.Add(customAnalyzer);
 
             // try adding suggesters
             var suggestSourceFields = new List<string>();
@@ -608,33 +591,18 @@ namespace VirtoCommerce.AzureSearchModule.Data
 
             if (suggestSourceFields.Any())
             {
-                var suggester = new Suggester(SuggesterName, suggestSourceFields);
-                index.Suggesters = new[] { suggester };
+                var suggester = new SearchSuggester(SuggesterName, suggestSourceFields);
+                index.Suggesters.Add(suggester);
             }
 
             return index;
-        }
-
-        protected virtual string GetTokenFilterName()
-        {
-            return _settingsManager.GetValue<string>(ModuleConstants.Settings.Indexing.TokenFilter);
-        }
-
-        protected virtual int GetMinGram()
-        {
-            return _settingsManager.GetValue<int>(ModuleConstants.Settings.Indexing.MinGram);
-        }
-
-        protected virtual int GetMaxGram()
-        {
-            return _settingsManager.GetValue<int>(ModuleConstants.Settings.Indexing.MaxGram);
         }
 
         #endregion
 
         #region Mapping
 
-        protected virtual async Task<IList<Field>> GetMappingAsync(string indexName)
+        protected virtual async Task<IList<SearchField>> GetMappingAsync(string indexName)
         {
             var providerFields = GetMappingFromCache(indexName);
             if (providerFields == null && await IndexExistsAsync(indexName))
@@ -642,33 +610,34 @@ namespace VirtoCommerce.AzureSearchModule.Data
                 providerFields = await GetIndexFields(indexName);
             }
 
-            providerFields ??= new List<Field>();
+            providerFields ??= new List<SearchField>();
             AddMappingToCache(indexName, providerFields);
 
             return providerFields;
         }
 
-        protected virtual void UpdateMapping(string indexName, IList<Field> providerFields)
+        protected virtual async Task UpdateMapping(string indexName, IList<SearchField> providerFields)
         {
             var index = CreateIndexDefinition(indexName, providerFields);
 
             try
             {
-                var updatedIndex = Client.Indexes.CreateOrUpdate(indexName, index);
-                AddMappingToCache(indexName, updatedIndex.Fields);
+
+                var updatedIndex = await Client.CreateOrUpdateIndexAsync(index);
+                AddMappingToCache(indexName, updatedIndex.Value.Fields);
             }
-            catch (CloudException cloudException)
+            catch (RequestFailedException exception)
             {
-                ThrowException(cloudException, providerFields: providerFields);
+                ThrowException(exception, providerFields: providerFields);
             }
         }
 
-        protected virtual IList<Field> GetMappingFromCache(string indexName)
+        protected virtual IList<SearchField> GetMappingFromCache(string indexName)
         {
             return _mappings.TryGetValue(indexName, out var mapping) ? mapping : null;
         }
 
-        protected virtual void AddMappingToCache(string indexName, IList<Field> providerFields)
+        protected virtual void AddMappingToCache(string indexName, IList<SearchField> providerFields)
         {
             _mappings[indexName] = providerFields;
         }
@@ -685,15 +654,16 @@ namespace VirtoCommerce.AzureSearchModule.Data
             throw new SearchException($"{message}. Search service name: {_azureSearchOptions.SearchServiceName}, Scope: {_searchOptions.Scope}", innerException);
         }
 
-        private void ThrowException(CloudException cloudException, IList<Field> providerFields = null, IEnumerable<SearchDocument> providerDocuments = null)
+        private void ThrowException(RequestFailedException exception, IList<SearchField> providerFields = null, IEnumerable<SearchDocument> providerDocuments = null)
         {
-            var error = WrapCloudExceptionMessage(cloudException);
+            var error = $"StatusCode: {exception.Status}; Content:{exception.Message}";
 
-            if (providerDocuments != null)
-            {
-                var documentIds = string.Join(',', providerDocuments.Select(x => x.Id));
-                error = $"{error}; DocumentIds:{documentIds}";
-            }
+            // todo
+            //if (providerDocuments != null)
+            //{
+            //    var documentIds = string.Join(',', providerDocuments.Select(x => x.Id));
+            //    error = $"{error}; DocumentIds:{documentIds}";
+            //}
 
             if (providerFields != null)
             {
@@ -701,32 +671,19 @@ namespace VirtoCommerce.AzureSearchModule.Data
                 error = $"{error}; FieldNames:{fieldNames}";
             }
 
-            throw new SearchException(error, cloudException);
+            throw new SearchException(error, exception);
         }
 
-        protected virtual SearchServiceClient CreateSearchServiceClient()
+        protected virtual SearchClient GetSearchIndexClient(string indexName)
         {
-            var result = new SearchServiceClient(_azureSearchOptions.SearchServiceName, new SearchCredentials(_azureSearchOptions.Key));
-            return result;
+            var client = Client.GetSearchClient(indexName);
+            return client;
         }
 
-        protected virtual ISearchIndexClient GetSearchIndexClient(string indexName)
+        protected virtual SearchIndexClient GetSearchIndexClient()
         {
-            return Client.Indexes.GetClient(indexName);
-        }
-
-        /// <summary>
-        /// Construct exception message since CloudException.Message doesn't contain details (sometimes)
-        /// </summary>
-        protected virtual string WrapCloudExceptionMessage(CloudException exception)
-        {
-            if (string.IsNullOrEmpty(exception.Response?.Content))
-            {
-                return exception.ToString();
-            }
-
-            var unescapedContent = Regex.Unescape(exception.Response.Content);
-            return $"StatusCode: {exception.Response.StatusCode}; Content:{unescapedContent}";
+            var client = new SearchIndexClient(new Uri(_azureSearchOptions.Endpoint), _azureKeyCredential);
+            return client;
         }
     }
 }

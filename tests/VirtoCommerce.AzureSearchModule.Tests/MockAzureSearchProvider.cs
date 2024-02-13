@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Microsoft.Azure.Search.Models;
+using Azure.Search.Documents.Indexes.Models;
 using Microsoft.Extensions.Options;
 using VirtoCommerce.AzureSearchModule.Data;
 using VirtoCommerce.Platform.Core.Settings;
@@ -8,21 +8,26 @@ using VirtoCommerce.SearchModule.Core.Model;
 
 namespace VirtoCommerce.AzureSearchModule.Tests
 {
-    public class MockAzureSearchProvider : AzureSearchProvider
+    public class MockAzureSearchProvider : AzureSearchDocumentsProvider
     {
         private const string _indexName = "TestIndex";
 
         public bool IsIndexExistsAsyncCalled { get; set; }
 
-        public MockAzureSearchProvider(IOptions<AzureSearchOptions> azureSearchOptions, IOptions<SearchOptions> searchOptions, ISettingsManager settingsManager, IAzureSearchRequestBuilder requestBuilder) :
-            base(azureSearchOptions, searchOptions, settingsManager, requestBuilder)
+        public MockAzureSearchProvider(
+            IOptions<AzureSearchOptions> azureSearchOptions,
+            IOptions<SearchOptions> searchOptions,
+            ISettingsManager settingsManager,
+            IAzureSearchDocumentsRequestBuilder requestBuilder,
+            IAzureSearchDocumentsResponseBuilder responseBuilder) :
+            base(azureSearchOptions, searchOptions, settingsManager, requestBuilder, responseBuilder)
         {
             IsIndexExistsAsyncCalled = false;
         }
 
-        protected override Task<IList<Field>> GetIndexFields(string indexName)
+        protected override Task<IList<SearchField>> GetIndexFields(string indexName)
         {
-            return Task.FromResult<IList<Field>>(new List<Field>());
+            return Task.FromResult<IList<SearchField>>(new List<SearchField>());
         }
 
         protected override Task<bool> IndexExistsAsync(string indexName)
@@ -31,12 +36,12 @@ namespace VirtoCommerce.AzureSearchModule.Tests
             return Task.FromResult(true);
         }
 
-        public Task<IList<Field>> CallGetMappingAsync()
+        public Task<IList<SearchField>> CallGetMappingAsync()
         {
             return GetMappingAsync(_indexName);
         }
 
-        public IList<Field> CallGetMappingFromCache()
+        public IList<SearchField> CallGetMappingFromCache()
         {
             return GetMappingFromCache(_indexName);
         }

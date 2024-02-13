@@ -1,25 +1,25 @@
-using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using Microsoft.Azure.Search.Models;
+using Azure.Search.Documents.Indexes.Models;
+using Azure.Search.Documents.Models;
+using VirtoCommerce.Platform.Core.Common;
 using VirtoCommerce.SearchModule.Core.Model;
 
 namespace VirtoCommerce.AzureSearchModule.Data
 {
-    [Obsolete("Use AzureSearchDocumentsRequestBuilder")]
-    public class AzureSearchRequestBuilder : IAzureSearchRequestBuilder
+    public class AzureSearchDocumentsRequestBuilder : IAzureSearchDocumentsRequestBuilder
     {
-        public virtual IList<AzureSearchRequest> BuildRequest(SearchRequest request, string indexName, string documentType, IList<Field> availableFields, QueryType queryParserType)
+        public virtual IList<AzureSearchRequest> BuildRequest(SearchRequest request, string indexName, string documentType, IList<SearchField> availableFields, SearchQueryType queryParserType)
         {
             var result = new List<AzureSearchRequest>();
 
             // Force Switch to queryParserType Full
             if (request.IsFuzzySearch)
             {
-                queryParserType = QueryType.Full;
+                queryParserType = SearchQueryType.Full;
             }
 
             // Create additional requests for each aggregation with filter which differs from main request filter or with empty field name.
@@ -52,12 +52,12 @@ namespace VirtoCommerce.AzureSearchModule.Data
             return result;
         }
 
-        public virtual string GetFilters(IFilter filter, IList<Field> availableFields)
+        public virtual string GetFilters(IFilter filter, IList<SearchField> availableFields)
         {
             return GetFilterExpressionRecursive(filter, availableFields);
         }
 
-        protected virtual AzureSearchRequest BuildPrimaryRequest(SearchRequest request, QueryType queryParserType, string searchText, string primaryFilter, IList<string> sorting, List<string> primaryFacets)
+        protected virtual AzureSearchRequest BuildPrimaryRequest(SearchRequest request, SearchQueryType queryParserType, string searchText, string primaryFilter, IList<string> sorting, List<string> primaryFacets)
         {
             if (!string.IsNullOrEmpty(request.RawQuery))
             {
@@ -69,7 +69,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
             }
         }
 
-        protected virtual void BuildRequestForFieldGroup(SearchRequest request, QueryType queryParserType, List<AzureSearchRequest> result, string searchText, IGrouping<string, AzureFacetRequest> filterGroup, IGrouping<string, AzureFacetRequest> fieldGroup)
+        protected virtual void BuildRequestForFieldGroup(SearchRequest request, SearchQueryType queryParserType, List<AzureSearchRequest> result, string searchText, IGrouping<string, AzureFacetRequest> filterGroup, IGrouping<string, AzureFacetRequest> fieldGroup)
         {
             if (string.IsNullOrEmpty(fieldGroup.Key))
             {
@@ -86,34 +86,49 @@ namespace VirtoCommerce.AzureSearchModule.Data
 
         protected virtual AzureSearchRequest CreateRawQueryRequest(SearchRequest request, IList<string> sorting)
         {
-            var searchParameters = new SearchParameters
+            var searchOptions = new Azure.Search.Documents.SearchOptions
             {
                 Filter = request.RawQuery,
-                OrderBy = sorting,
                 Skip = request.Skip,
-                Top = request.Take
+                Size = request.Take
             };
-            return new AzureSearchRequest { SearchParameters = searchParameters };
+
+            if (!sorting.IsNullOrEmpty())
+            {
+                searchOptions.OrderBy.AddRange(sorting);
+            }
+
+            return new AzureSearchRequest { SearchOptions = searchOptions };
         }
 
-        protected virtual AzureSearchRequest CreateRequest(SearchRequest request, QueryType queryParserType, string searchText, string aggregationId, string filter, IList<string> facets, IList<string> orderBy)
+        protected virtual AzureSearchRequest CreateRequest(SearchRequest request, SearchQueryType queryParserType, string searchText, string aggregationId, string filter, IList<string> facets, IList<string> sorting)
         {
-            return new AzureSearchRequest
+            var searchRequest = new AzureSearchRequest
             {
                 SearchText = searchText,
                 AggregationId = aggregationId,
-                SearchParameters = new SearchParameters
+                SearchOptions = new Azure.Search.Documents.SearchOptions
                 {
                     QueryType = queryParserType,
                     SearchMode = SearchMode.All,
-                    IncludeTotalResultCount = true,
+                    IncludeTotalCount = true,
                     Filter = filter,
-                    Facets = facets,
-                    OrderBy = orderBy,
                     Skip = request.Skip,
-                    Top = request.Take,
+                    Size = request.Take,
                 }
             };
+
+            if (!sorting.IsNullOrEmpty())
+            {
+                searchRequest.SearchOptions.OrderBy.AddRange(sorting);
+            }
+
+            if (!facets.IsNullOrEmpty())
+            {
+                searchRequest.SearchOptions.Facets.AddRange(facets);
+            }
+
+            return searchRequest;
         }
 
         protected virtual string GetSearchText(SearchRequest request)
@@ -140,7 +155,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
             return Regex.Replace(searchKeywords, @"(\w+)", $"$0~{fuzzinessLevel}");
         }
 
-        protected virtual IList<string> GetSorting(SearchRequest request, IList<Field> availableFields)
+        protected virtual IList<string> GetSorting(SearchRequest request, IList<SearchField> availableFields)
         {
             IList<string> result = null;
 
@@ -161,7 +176,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
             return result;
         }
 
-        protected virtual string GetSortingField(SortingField sortingField, IList<Field> availableFields)
+        protected virtual string GetSortingField(SortingField sortingField, IList<SearchField> availableFields)
         {
             string result = null;
 
@@ -185,12 +200,12 @@ namespace VirtoCommerce.AzureSearchModule.Data
             return result;
         }
 
-        protected virtual string GetFilters(SearchRequest request, IList<Field> availableFields)
+        protected virtual string GetFilters(SearchRequest request, IList<SearchField> availableFields)
         {
             return GetFilterExpressionRecursive(request.Filter, availableFields);
         }
 
-        protected virtual string GetFilterExpressionRecursive(IFilter filter, IList<Field> availableFields)
+        protected virtual string GetFilterExpressionRecursive(IFilter filter, IList<SearchField> availableFields)
         {
             string result = null;
 
@@ -222,7 +237,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
             return result;
         }
 
-        protected virtual string CreateIdsFilter(IdsFilter idsFilter, IList<Field> availableFields)
+        protected virtual string CreateIdsFilter(IdsFilter idsFilter, IList<SearchField> availableFields)
         {
             string result = null;
 
@@ -235,7 +250,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
             return result;
         }
 
-        protected virtual string CreateTermFilter(TermFilter termFilter, IList<Field> availableFields)
+        protected virtual string CreateTermFilter(TermFilter termFilter, IList<SearchField> availableFields)
         {
             string result;
 
@@ -254,7 +269,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
             return result;
         }
 
-        protected virtual string CreateRangeFilter(RangeFilter rangeFilter, IList<Field> availableFields)
+        protected virtual string CreateRangeFilter(RangeFilter rangeFilter, IList<SearchField> availableFields)
         {
             string result;
 
@@ -276,7 +291,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
             return result;
         }
 
-        protected virtual string CreateGeoDistanceFilter(GeoDistanceFilter geoDistanceFilter, IList<Field> availableFields)
+        protected virtual string CreateGeoDistanceFilter(GeoDistanceFilter geoDistanceFilter, IList<SearchField> availableFields)
         {
             string result;
 
@@ -294,7 +309,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
             return result;
         }
 
-        protected virtual string CreateNotFilter(NotFilter notFilter, IList<Field> availableFields)
+        protected virtual string CreateNotFilter(NotFilter notFilter, IList<SearchField> availableFields)
         {
             string result = null;
 
@@ -307,7 +322,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
             return result;
         }
 
-        protected virtual string CreateAndFilter(AndFilter andFilter, IList<Field> availableFields)
+        protected virtual string CreateAndFilter(AndFilter andFilter, IList<SearchField> availableFields)
         {
             string result = null;
 
@@ -320,7 +335,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
             return result;
         }
 
-        protected virtual string CreateOrFilter(OrFilter orFilter, IList<Field> availableFields)
+        protected virtual string CreateOrFilter(OrFilter orFilter, IList<SearchField> availableFields)
         {
             string result = null;
 
@@ -369,29 +384,29 @@ namespace VirtoCommerce.AzureSearchModule.Data
             return result;
         }
 
-        protected virtual string GetEqualsFilterExpression(Field availableField, IEnumerable<string> rawValues)
+        protected virtual string GetEqualsFilterExpression(SearchField availableField, IEnumerable<string> rawValues)
         {
             var azureFieldName = availableField.Name;
             var values = rawValues.Where(v => !string.IsNullOrEmpty(v)).Select(v => GetFilterValue(availableField, v)).ToArray();
             return AzureSearchHelper.JoinNonEmptyStrings(" or ", true, values.Select(v => $"{azureFieldName} eq {v}").ToArray());
         }
 
-        public virtual string GetContainsFilterExpression(Field availableField, IEnumerable<string> rawValues)
+        public virtual string GetContainsFilterExpression(SearchField availableField, IEnumerable<string> rawValues)
         {
             var azureFieldName = availableField.Name;
             var values = rawValues.Where(v => !string.IsNullOrEmpty(v)).Select(GetStringFilterValue).ToArray();
             return AzureSearchHelper.JoinNonEmptyStrings(" or ", true, values.Select(v => $"{azureFieldName}/any(v: v eq {v})").ToArray());
         }
 
-        protected virtual string GetFilterValue(Field availableField, string rawValue)
+        protected virtual string GetFilterValue(SearchField availableField, string rawValue)
         {
             string result;
 
-            if (availableField?.Type == DataType.Boolean)
+            if (availableField?.Type == SearchFieldDataType.Boolean)
             {
                 result = rawValue.ToLowerInvariant();
             }
-            else if (availableField?.Type != DataType.String)
+            else if (availableField?.Type != SearchFieldDataType.String)
             {
                 result = rawValue;
             }
@@ -408,7 +423,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
             return $"'{rawValue.Replace("'", "''")}'";
         }
 
-        protected virtual IList<AzureFacetRequest> GetFacets(SearchRequest request, IList<Field> availableFields)
+        protected virtual IList<AzureFacetRequest> GetFacets(SearchRequest request, IList<SearchField> availableFields)
         {
             var result = new List<AzureFacetRequest>();
 
@@ -446,7 +461,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
             return result;
         }
 
-        protected virtual string CreateTermAggregationRequest(TermAggregationRequest termAggregationRequest, IList<Field> availableFields)
+        protected virtual string CreateTermAggregationRequest(TermAggregationRequest termAggregationRequest, IList<SearchField> availableFields)
         {
             string result = null;
 
@@ -467,7 +482,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
             return result;
         }
 
-        protected virtual string CreateRangeAggregationRequest(RangeAggregationRequest rangeAggregationRequest, IList<Field> availableFields)
+        protected virtual string CreateRangeAggregationRequest(RangeAggregationRequest rangeAggregationRequest, IList<SearchField> availableFields)
         {
             string result = null;
 

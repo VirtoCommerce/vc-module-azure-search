@@ -5,7 +5,7 @@ namespace VirtoCommerce.AzureSearchModule.Tests
 {
     public class FuzzyConvertorTest
     {
-        private readonly AzureSearchRequestBuilder _queryBuilder = new();
+        private readonly AzureSearchDocumentsRequestBuilder _queryBuilder = new();
 
         [Fact]
         public void GetSimpleFuzzySearchText()
