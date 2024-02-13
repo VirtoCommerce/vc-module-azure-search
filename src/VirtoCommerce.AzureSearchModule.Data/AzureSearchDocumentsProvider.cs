@@ -106,18 +106,14 @@ namespace VirtoCommerce.AzureSearchModule.Data
                 var indexName = GetIndexName(documentType);
                 var providerDocuments = documents.Select(document => ConvertToProviderDocument(document, null, documentType)).ToList();
 
-                var batch = IndexDocumentsBatch.Delete("Id", documents.Select(x => x.Id).ToList());
+                var batch = IndexDocumentsBatch.Delete(providerDocuments);
 
                 var indexClient = GetSearchIndexClient(indexName);
                 var response = await indexClient.IndexDocumentsAsync(batch);
 
                 result = CreateIndexingResult(response.Value.Results);
             }
-            //catch (RequestFailedException ex)
-            //{
-            //    result = CreateIndexingResult(ex.IndexingResults);
-            //}
-            catch (Exception ex)
+            catch (RequestFailedException ex)
             {
                 throw new SearchException(ex.Message, ex);
             }
@@ -187,10 +183,9 @@ namespace VirtoCommerce.AzureSearchModule.Data
 
                 var suggestResult = await indexClient.SuggestAsync<SearchDocument>(request.Query, SuggesterName, suggestParameters);
 
-                //todo:
-                //result.Suggestions = suggestResult.Results.Select(x => x.Text).ToList();
+                result.Suggestions = suggestResult.Value.Results.Select(x => x.Text).ToList();
             }
-            catch (Exception ex)
+            catch (RequestFailedException ex)
             {
                 throw new SearchException(ex.Message, ex);
             }
@@ -467,8 +462,6 @@ namespace VirtoCommerce.AzureSearchModule.Data
 
             IndexingResult result = null;
 
-            ;
-
             var batch = partialUpdate ? IndexDocumentsBatch.MergeOrUpload(providerDocuments) : IndexDocumentsBatch.Upload(providerDocuments);
 
             var indexClient = GetSearchIndexClient(indexName);
@@ -478,30 +471,20 @@ namespace VirtoCommerce.AzureSearchModule.Data
             {
                 try
                 {
-                    var response = await indexClient.IndexDocumentsAsync(batch, new IndexDocumentsOptions { ThrowOnAnyError = true });
-
+                    var response = await indexClient.IndexDocumentsAsync(batch);
                     result = CreateIndexingResult(response.Value.Results);
                     break;
                 }
-                catch (Exception e)
+                catch (RequestFailedException exception)
+                    when (i > 0 && exception.Message.Contains("Make sure to only use property names that are defined by the type"))
                 {
-                    var e2 = e;
+                    // Need to wait some time until new mapping is applied
+                    await Task.Delay(1000);
                 }
-                //catch (IndexBatchException ex)
-                //{
-                //    result = CreateIndexingResult(ex.IndexingResults);
-                //    break;
-                //}
-                //catch (CloudException cloudException)
-                //    when (i > 0 && cloudException.Message.Contains("Make sure to only use property names that are defined by the type"))
-                //{
-                //    // Need to wait some time until new mapping is applied
-                //    await Task.Delay(1000);
-                //}
-                //catch (CloudException cloudException)
-                //{
-                //    ThrowException(cloudException, providerDocuments: providerDocuments);
-                //}
+                catch (RequestFailedException exception)
+                {
+                    ThrowException(exception, providerDocuments: providerDocuments);
+                }
             }
 
             return result;
@@ -658,12 +641,11 @@ namespace VirtoCommerce.AzureSearchModule.Data
         {
             var error = $"StatusCode: {exception.Status}; Content:{exception.Message}";
 
-            // todo
-            //if (providerDocuments != null)
-            //{
-            //    var documentIds = string.Join(',', providerDocuments.Select(x => x.Id));
-            //    error = $"{error}; DocumentIds:{documentIds}";
-            //}
+            if (providerDocuments != null)
+            {
+                var documentIds = string.Join(',', providerDocuments.Select(x => x.GetString(AzureSearchHelper.ToAzureFieldName("id"))));
+                error = $"{error}; DocumentIds:{documentIds}";
+            }
 
             if (providerFields != null)
             {

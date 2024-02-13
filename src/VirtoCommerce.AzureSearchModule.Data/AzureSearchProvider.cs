@@ -19,7 +19,7 @@ using IndexingResult = VirtoCommerce.SearchModule.Core.Model.IndexingResult;
 
 namespace VirtoCommerce.AzureSearchModule.Data
 {
-    [Obsolete("Use AzureSearchDocumentsProvider")]
+    [Obsolete("Use AzureSearchDocumentsProvider", DiagnosticId = "VC0006", UrlFormat = "https://docs.virtocommerce.org/products/products-virto3-versions/")]
     public class AzureSearchProvider : ISearchProvider, ISupportPartialUpdate, ISupportSuggestions
     {
         public const string ContentAnalyzerName = "content_analyzer";

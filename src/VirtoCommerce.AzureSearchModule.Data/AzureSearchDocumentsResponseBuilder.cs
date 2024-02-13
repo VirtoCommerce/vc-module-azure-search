@@ -139,7 +139,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
                     {
                         result = new AggregationResponse
                         {
-                            Id = (termAggregationRequest.Id ?? termAggregationRequest.FieldName).ToLowerInvariant(),
+                            Id = termAggregationRequest.Id ?? termAggregationRequest.FieldName,
                             Values = new List<AggregationResponseValue>(),
                         };
 
