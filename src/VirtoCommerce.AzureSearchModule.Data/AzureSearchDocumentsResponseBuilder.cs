@@ -219,7 +219,12 @@ namespace VirtoCommerce.AzureSearchModule.Data
 
         private static FacetResult GetRangeFacetResult(RangeAggregationRequestValue value, IEnumerable<FacetResult> facetResults)
         {
-            var lower = value.Lower == null ? null : value.Lower.Length == 0 ? null : value.Lower == "0" ? null : value.Lower;
+            string lower = null;
+            if (value.Lower != null && value.Lower.Length != 0 && value.Lower != "0")
+            {
+                lower = value.Lower;
+            }
+
             var upper = value.Upper;
 
             return facetResults.FirstOrDefault(r => r.Count > 0 && r.From?.ToStringInvariant() == lower && r.To?.ToStringInvariant() == upper);
