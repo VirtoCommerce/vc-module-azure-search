@@ -31,7 +31,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
         /// </summary>
         protected const string SuggesterName = "default_suggester";
         protected const string SuggestFieldSuffix = "__suggest";
-
+        private const int MillisecondsDelay = 1000;
         private readonly ConcurrentDictionary<string, IList<SearchField>> _mappings = new();
 
         private readonly AzureSearchOptions _azureSearchOptions;
@@ -61,10 +61,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
 
         public virtual async Task DeleteIndexAsync(string documentType)
         {
-            if (string.IsNullOrEmpty(documentType))
-            {
-                throw new ArgumentNullException(nameof(documentType));
-            }
+            ArgumentNullException.ThrowIfNull(documentType);
 
             try
             {
@@ -229,7 +226,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
 
         protected virtual SearchDocument ConvertToProviderDocument(IndexDocument document, IList<SearchField> providerFields, string documentType)
         {
-            var result = new SearchModule.Core.Model.SearchDocument { Id = document.Id };
+            var result = new Dictionary<string, object>();
 
             if (document.Fields.All(x => x.Name != AzureSearchHelper.RawKeyFieldName))
             {
@@ -240,11 +237,9 @@ namespace VirtoCommerce.AzureSearchModule.Data
             {
                 var fieldName = AzureSearchHelper.ToAzureFieldName(field.Name);
 
-                if (result.ContainsKey(fieldName))
+                if (result.TryGetValue(fieldName, out var currentValue))
                 {
                     var newValues = new List<object>();
-
-                    var currentValue = result[fieldName];
 
                     if (currentValue is object[] currentValues)
                     {
@@ -479,7 +474,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
                     when (i > 0 && exception.Message.Contains("Make sure to only use property names that are defined by the type"))
                 {
                     // Need to wait some time until new mapping is applied
-                    await Task.Delay(1000);
+                    await Task.Delay(MillisecondsDelay);
                 }
                 catch (RequestFailedException exception)
                 {
@@ -572,7 +567,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
                 }
             }
 
-            if (suggestSourceFields.Any())
+            if (suggestSourceFields.Count > 0)
             {
                 var suggester = new SearchSuggester(SuggesterName, suggestSourceFields);
                 index.Suggesters.Add(suggester);
@@ -588,7 +583,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
         protected virtual async Task<IList<SearchField>> GetMappingAsync(string indexName)
         {
             var providerFields = GetMappingFromCache(indexName);
-            if (providerFields == null && await IndexExistsAsync(indexName))
+            if (providerFields.IsNullOrEmpty() && await IndexExistsAsync(indexName))
             {
                 providerFields = await GetIndexFields(indexName);
             }
@@ -617,7 +612,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
 
         protected virtual IList<SearchField> GetMappingFromCache(string indexName)
         {
-            return _mappings.TryGetValue(indexName, out var mapping) ? mapping : null;
+            return _mappings.TryGetValue(indexName, out var mapping) ? mapping : new List<SearchField>();
         }
 
         protected virtual void AddMappingToCache(string indexName, IList<SearchField> providerFields)
@@ -632,12 +627,12 @@ namespace VirtoCommerce.AzureSearchModule.Data
 
         #endregion
 
-        protected virtual void ThrowException(string message, Exception innerException)
+        private void ThrowException(string message, Exception innerException)
         {
             throw new SearchException($"{message}. Search service name: {_azureSearchOptions.SearchServiceName}, Scope: {_searchOptions.Scope}", innerException);
         }
 
-        private void ThrowException(RequestFailedException exception, IList<SearchField> providerFields = null, IEnumerable<SearchDocument> providerDocuments = null)
+        private static void ThrowException(RequestFailedException exception, IList<SearchField> providerFields = null, IEnumerable<SearchDocument> providerDocuments = null)
         {
             var error = $"StatusCode: {exception.Status}; Content:{exception.Message}";
 

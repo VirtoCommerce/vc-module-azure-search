@@ -10,8 +10,11 @@ using VirtoCommerce.SearchModule.Core.Model;
 
 namespace VirtoCommerce.AzureSearchModule.Data
 {
-    public class AzureSearchDocumentsRequestBuilder : IAzureSearchDocumentsRequestBuilder
+    public partial class AzureSearchDocumentsRequestBuilder : IAzureSearchDocumentsRequestBuilder
     {
+        [GeneratedRegex(@"(\w+)")]
+        private static partial Regex FuzzyRegex();
+
         public virtual IList<AzureSearchRequest> BuildRequest(SearchRequest request, string indexName, string documentType, IList<SearchField> availableFields, SearchQueryType queryParserType)
         {
             var result = new List<AzureSearchRequest>();
@@ -23,7 +26,6 @@ namespace VirtoCommerce.AzureSearchModule.Data
             }
 
             // Create additional requests for each aggregation with filter which differs from main request filter or with empty field name.
-
             var searchText = GetSearchText(request);
             var primaryFilter = GetFilters(request, availableFields);
             var sorting = GetSorting(request, availableFields);
@@ -151,8 +153,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
             // Automatically extend query string where each term is followed by a tilde (~{LevelNumber}) operator at the end of each whole term
             // <string> > <string>~
             // budget hotel pool > budget~ hotel~ pool~ OR budget~2 hotel~2 pool~2
-
-            return Regex.Replace(searchKeywords, @"(\w+)", $"$0~{fuzzinessLevel}");
+            return FuzzyRegex().Replace(searchKeywords, $"$0~{fuzzinessLevel}");
         }
 
         protected virtual IList<string> GetSorting(SearchRequest request, IList<SearchField> availableFields)
@@ -167,7 +168,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
                     .Distinct()
                     .ToArray();
 
-                if (fields.Any())
+                if (fields.Length != 0)
                 {
                     result = fields;
                 }

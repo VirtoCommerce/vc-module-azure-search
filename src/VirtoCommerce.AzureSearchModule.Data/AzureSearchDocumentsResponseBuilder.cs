@@ -5,6 +5,7 @@ using Azure.Search.Documents.Models;
 using VirtoCommerce.Platform.Core.Common;
 using VirtoCommerce.SearchModule.Core.Model;
 using FacetResults = System.Collections.Generic.IDictionary<string, System.Collections.Generic.IList<Azure.Search.Documents.Models.FacetResult>>;
+using SearchDocument = VirtoCommerce.SearchModule.Core.Model.SearchDocument;
 
 namespace VirtoCommerce.AzureSearchModule.Data
 {
@@ -25,7 +26,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
                 Aggregations = GetAggregations(searchResults, request),
             };
 
-            var documents = new List<SearchModule.Core.Model.SearchDocument>();
+            var documents = new List<SearchDocument>();
             foreach (var resultDocument in primaryResponse.GetResults())
             {
                 var searchDocument = ToSearchDocument(resultDocument.Document);
@@ -37,9 +38,9 @@ namespace VirtoCommerce.AzureSearchModule.Data
             return result;
         }
 
-        public SearchModule.Core.Model.SearchDocument ToSearchDocument(Azure.Search.Documents.Models.SearchDocument searchResult)
+        public static SearchDocument ToSearchDocument(Azure.Search.Documents.Models.SearchDocument searchResult)
         {
-            var result = new SearchModule.Core.Model.SearchDocument();
+            var result = new SearchDocument();
 
             foreach (var (docKey, docValue) in searchResult)
             {
@@ -66,13 +67,14 @@ namespace VirtoCommerce.AzureSearchModule.Data
             return result;
         }
 
-        private static IList<AggregationResponse> GetAggregations(IList<AzureSearchResult> searchResults, SearchRequest request)
+        private static List<AggregationResponse> GetAggregations(IList<AzureSearchResult> searchResults, SearchRequest request)
         {
             var result = new List<AggregationResponse>();
 
             // Combine facets from all responses to a single FacetResults
             var facetResults = searchResults.Select(x => x.SearchDocumentResponse).Where(r => r.Value?.Facets != null).SelectMany(r => r.Value.Facets).ToList();
-            if (facetResults.Any())
+
+            if (facetResults.Count != 0)
             {
                 var facets = new Dictionary<string, IList<Azure.Search.Documents.Models.FacetResult>>();
                 foreach (var keyValuePair in facetResults)
