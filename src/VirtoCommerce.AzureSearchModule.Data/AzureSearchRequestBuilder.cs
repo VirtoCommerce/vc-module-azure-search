@@ -9,7 +9,7 @@ using VirtoCommerce.SearchModule.Core.Model;
 
 namespace VirtoCommerce.AzureSearchModule.Data
 {
-    [Obsolete("Use AzureSearchDocumentsRequestBuilder", DiagnosticId = "VC0006", UrlFormat = "https://docs.virtocommerce.org/products/products-virto3-versions/")]
+    [Obsolete("Use AzureSearchDocumentsRequestBuilder", DiagnosticId = "VC0008", UrlFormat = "https://docs.virtocommerce.org/products/products-virto3-versions/")]
     public class AzureSearchRequestBuilder : IAzureSearchRequestBuilder
     {
         public virtual IList<AzureSearchRequest> BuildRequest(SearchRequest request, string indexName, string documentType, IList<Field> availableFields, QueryType queryParserType)

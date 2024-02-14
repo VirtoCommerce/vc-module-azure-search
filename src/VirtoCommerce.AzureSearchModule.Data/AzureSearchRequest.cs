@@ -9,7 +9,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
         public string AggregationId { get; set; }
         public string SearchText { get; set; }
 
-        [Obsolete("Use SearchOptions", DiagnosticId = "VC0006", UrlFormat = "https://docs.virtocommerce.org/products/products-virto3-versions/")]
+        [Obsolete("Use SearchOptions", DiagnosticId = "VC0008", UrlFormat = "https://docs.virtocommerce.org/products/products-virto3-versions/")]
         public SearchParameters SearchParameters { get; set; }
 
         public SearchOptions SearchOptions { get; set; }
