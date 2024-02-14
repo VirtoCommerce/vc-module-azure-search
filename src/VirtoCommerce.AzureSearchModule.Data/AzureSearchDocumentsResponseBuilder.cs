@@ -4,16 +4,12 @@ using System.Linq;
 using Azure.Search.Documents.Models;
 using VirtoCommerce.Platform.Core.Common;
 using VirtoCommerce.SearchModule.Core.Model;
+using AzureSearchDocument = Azure.Search.Documents.Models.SearchDocument;
 using FacetResults = System.Collections.Generic.IDictionary<string, System.Collections.Generic.IList<Azure.Search.Documents.Models.FacetResult>>;
-using SearchDocument = VirtoCommerce.SearchModule.Core.Model.SearchDocument;
+using VirtoSearchDocument = VirtoCommerce.SearchModule.Core.Model.SearchDocument;
 
 namespace VirtoCommerce.AzureSearchModule.Data
 {
-    public interface IAzureSearchDocumentsResponseBuilder
-    {
-        SearchResponse ToSearchResponse(IList<AzureSearchResult> searchResults, SearchRequest request, string documentType);
-    }
-
     public class AzureSearchDocumentsResponseBuilder : IAzureSearchDocumentsResponseBuilder
     {
         public SearchResponse ToSearchResponse(IList<AzureSearchResult> searchResults, SearchRequest request, string documentType)
@@ -23,26 +19,19 @@ namespace VirtoCommerce.AzureSearchModule.Data
             var result = new SearchResponse
             {
                 TotalCount = primaryResponse.TotalCount ?? 0,
+                Documents = primaryResponse.GetResults().Select(ToSearchDocument).ToList(),
                 Aggregations = GetAggregations(searchResults, request),
             };
 
-            var documents = new List<SearchDocument>();
-            foreach (var resultDocument in primaryResponse.GetResults())
-            {
-                var searchDocument = ToSearchDocument(resultDocument.Document);
-                documents.Add(searchDocument);
-            }
-
-            result.Documents = documents;
 
             return result;
         }
 
-        public static SearchDocument ToSearchDocument(Azure.Search.Documents.Models.SearchDocument searchResult)
+        public static VirtoSearchDocument ToSearchDocument(SearchResult<AzureSearchDocument> searchResult)
         {
-            var result = new SearchDocument();
+            var result = new VirtoSearchDocument();
 
-            foreach (var (docKey, docValue) in searchResult)
+            foreach (var (docKey, docValue) in searchResult.Document)
             {
                 var key = AzureSearchHelper.FromAzureFieldName(docKey);
 
@@ -72,11 +61,15 @@ namespace VirtoCommerce.AzureSearchModule.Data
             var result = new List<AggregationResponse>();
 
             // Combine facets from all responses to a single FacetResults
-            var facetResults = searchResults.Select(x => x.SearchDocumentResponse).Where(r => r.Value?.Facets != null).SelectMany(r => r.Value.Facets).ToList();
+            var facetResults = searchResults
+                .Select(x => x.SearchDocumentResponse)
+                .Where(r => r.Value?.Facets != null)
+                .SelectMany(r => r.Value.Facets)
+                .ToList();
 
             if (facetResults.Count != 0)
             {
-                var facets = new Dictionary<string, IList<Azure.Search.Documents.Models.FacetResult>>();
+                var facets = new Dictionary<string, IList<FacetResult>>();
                 foreach (var keyValuePair in facetResults)
                 {
                     facets[keyValuePair.Key] = keyValuePair.Value;
@@ -128,26 +121,24 @@ namespace VirtoCommerce.AzureSearchModule.Data
 
         private static AggregationResponse GetTermAggregation(TermAggregationRequest termAggregationRequest, FacetResults facets)
         {
-            AggregationResponse result = null;
-
             if (termAggregationRequest == null)
             {
-                return result;
+                return null;
             }
 
             var azureFieldName = AzureSearchHelper.ToAzureFieldName(termAggregationRequest.FieldName);
             if (string.IsNullOrEmpty(azureFieldName))
             {
-                return result;
+                return null;
             }
 
             var facetResults = facets.TryGetValue(azureFieldName, out var facet) ? facet : null;
-            if (facetResults.IsNullOrEmpty())
+            if (facetResults == null || facetResults.Count == 0)
             {
-                return result;
+                return null;
             }
 
-            result = new AggregationResponse
+            var result = new AggregationResponse
             {
                 Id = termAggregationRequest.Id ?? termAggregationRequest.FieldName,
                 Values = new List<AggregationResponseValue>(),
@@ -182,27 +173,24 @@ namespace VirtoCommerce.AzureSearchModule.Data
 
         private static AggregationResponse GetRangeAggregation(RangeAggregationRequest rangeAggregationRequest, FacetResults facets)
         {
-            AggregationResponse result = null;
-
             if (rangeAggregationRequest == null)
             {
-                return result;
+                return null;
             }
 
             var azureFieldName = AzureSearchHelper.ToAzureFieldName(rangeAggregationRequest.FieldName);
             if (string.IsNullOrEmpty(azureFieldName))
             {
-                return result;
+                return null;
             }
 
             var facetResults = facets.TryGetValue(azureFieldName, out var facet) ? facet : null;
-
-            if (facetResults.IsNullOrEmpty())
+            if (facetResults == null || facetResults.Count == 0)
             {
-                return result;
+                return null;
             }
 
-            result = new AggregationResponse
+            var result = new AggregationResponse
             {
                 Id = (rangeAggregationRequest.Id ?? rangeAggregationRequest.FieldName).ToLowerInvariant(),
                 Values = new List<AggregationResponseValue>(),
@@ -219,11 +207,9 @@ namespace VirtoCommerce.AzureSearchModule.Data
 
         private static FacetResult GetRangeFacetResult(RangeAggregationRequestValue value, IEnumerable<FacetResult> facetResults)
         {
-            string lower = null;
-            if (value.Lower != null && value.Lower.Length != 0 && value.Lower != "0")
-            {
-                lower = value.Lower;
-            }
+            var lower = string.IsNullOrEmpty(value.Lower) || value.Lower == "0"
+                ? null
+                : value.Lower;
 
             var upper = value.Upper;
 
