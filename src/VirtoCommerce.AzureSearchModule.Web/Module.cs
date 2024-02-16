@@ -18,8 +18,9 @@ namespace VirtoCommerce.AzureSearchModule.Web
             if (Configuration.SearchProviderActive(ModuleConstants.ProviderName))
             {
                 serviceCollection.Configure<AzureSearchOptions>(Configuration.GetSection($"Search:{ModuleConstants.ProviderName}"));
-                serviceCollection.AddSingleton<IAzureSearchRequestBuilder, AzureSearchRequestBuilder>();
-                serviceCollection.AddSingleton<AzureSearchProvider>();
+                serviceCollection.AddSingleton<IAzureSearchDocumentsRequestBuilder, AzureSearchDocumentsRequestBuilder>();
+                serviceCollection.AddSingleton<IAzureSearchDocumentsResponseBuilder, AzureSearchDocumentsResponseBuilder>();
+                serviceCollection.AddSingleton<AzureSearchDocumentsProvider>();
             }
         }
 
@@ -30,7 +31,7 @@ namespace VirtoCommerce.AzureSearchModule.Web
 
             if (Configuration.SearchProviderActive(ModuleConstants.ProviderName))
             {
-                appBuilder.UseSearchProvider<AzureSearchProvider>(ModuleConstants.ProviderName);
+                appBuilder.UseSearchProvider<AzureSearchDocumentsProvider>(ModuleConstants.ProviderName);
             }
         }
 

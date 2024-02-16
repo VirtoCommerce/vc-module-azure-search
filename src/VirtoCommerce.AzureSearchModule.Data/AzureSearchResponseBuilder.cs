@@ -8,6 +8,7 @@ using FacetResults = System.Collections.Generic.IDictionary<string, System.Colle
 
 namespace VirtoCommerce.AzureSearchModule.Data
 {
+    [Obsolete("Use AzureSearchDocumentsResponseBuilder", DiagnosticId = "VC0008", UrlFormat = "https://docs.virtocommerce.org/products/products-virto3-versions/")]
     public static class AzureSearchResponseBuilder
     {
         public static SearchResponse ToSearchResponse(this IList<AzureSearchResult> searchResults, SearchRequest request, string documentType)
