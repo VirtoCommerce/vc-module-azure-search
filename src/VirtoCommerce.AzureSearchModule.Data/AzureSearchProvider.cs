@@ -19,6 +19,7 @@ using IndexingResult = VirtoCommerce.SearchModule.Core.Model.IndexingResult;
 
 namespace VirtoCommerce.AzureSearchModule.Data
 {
+    [Obsolete("Use AzureSearchDocumentsProvider", DiagnosticId = "VC0008", UrlFormat = "https://docs.virtocommerce.org/products/products-virto3-versions/")]
     public class AzureSearchProvider : ISearchProvider, ISupportPartialUpdate, ISupportSuggestions
     {
         public const string ContentAnalyzerName = "content_analyzer";
@@ -142,7 +143,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
 
                 var indexClient = GetSearchIndexClient(indexName);
 
-                var providerRequests = _requestBuilder.BuildRequest(request, indexName, documentType, availableFields, _azureSearchOptions.QueryParserType);
+                var providerRequests = _requestBuilder.BuildRequest(request, indexName, documentType, availableFields, QueryType.Simple);
                 var providerResponses = await Task.WhenAll(providerRequests.Select(r => indexClient.Documents.SearchAsync(r?.SearchText, r?.SearchParameters)));
 
                 // Copy aggregation ID from request to response
