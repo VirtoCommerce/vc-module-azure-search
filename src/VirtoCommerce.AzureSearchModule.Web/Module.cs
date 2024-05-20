@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using VirtoCommerce.AzureSearchModule.Data;
+using VirtoCommerce.AzureSearchModule.Data.Extensions;
 using VirtoCommerce.Platform.Core.Modularity;
 using VirtoCommerce.Platform.Core.Settings;
 using VirtoCommerce.SearchModule.Core.Extensions;
@@ -31,7 +32,10 @@ namespace VirtoCommerce.AzureSearchModule.Web
 
             if (Configuration.SearchProviderActive(ModuleConstants.ProviderName))
             {
-                appBuilder.UseSearchProvider<AzureSearchDocumentsProvider>(ModuleConstants.ProviderName);
+                appBuilder.UseSearchProvider<AzureSearchDocumentsProvider>(ModuleConstants.ProviderName, (provider, documentTypes) =>
+                {
+                    provider.AddActiveAlias(documentTypes);
+                });
             }
         }
 
