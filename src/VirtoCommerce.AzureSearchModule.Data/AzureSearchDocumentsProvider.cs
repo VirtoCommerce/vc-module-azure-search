@@ -230,10 +230,15 @@ namespace VirtoCommerce.AzureSearchModule.Data
             }
         }
 
-        public async Task SwapIndexAsync(string documentType)
+        public Task SwapIndexAsync(string documentType)
         {
             ArgumentNullException.ThrowIfNull(documentType);
 
+            return SwapIndexInternalAsync(documentType);
+        }
+
+        private async Task SwapIndexInternalAsync(string documentType)
+        {
             // get active index and alias
             var activeIndexAlias = GetIndexAlias(ActiveIndexAlias, documentType);
             var backupIndexAlias = GetIndexAlias(BackupIndexAlias, documentType);
