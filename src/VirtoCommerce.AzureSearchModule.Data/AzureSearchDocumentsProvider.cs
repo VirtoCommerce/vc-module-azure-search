@@ -540,7 +540,8 @@ namespace VirtoCommerce.AzureSearchModule.Data
                     break;
                 }
                 catch (RequestFailedException exception)
-                    when (i > 0 && exception.Message.Contains("Make sure to only use property names that are defined by the type"))
+                    when (i > 0 &&
+                    (exception.Message.Contains("Make sure to only use property names that are defined by the type") || exception.Status == 404))
                 {
                     // Need to wait some time until new mapping is applied
                     await Task.Delay(MillisecondsDelay);
