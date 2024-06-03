@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using VirtoCommerce.AzureSearchModule.Data;
 using VirtoCommerce.SearchModule.Core.Model;
@@ -33,7 +34,10 @@ namespace VirtoCommerce.AzureSearchModule.Tests
             var azureSearchOptions = GetAzureSearchOptions();
             var options = GetSearchOptions();
 
-            var provider = new AzureSearchDocumentsProvider(azureSearchOptions, options, GetSettingsManager(), _requestBuilder, _responseBuilder);
+            var loggerFactory = LoggerFactory.Create(builder => { builder.ClearProviders(); });
+            var logger = loggerFactory.CreateLogger<AzureSearchDocumentsProvider>();
+
+            var provider = new AzureSearchDocumentsProvider(azureSearchOptions, options, GetSettingsManager(), _requestBuilder, _responseBuilder, logger);
             return provider;
         }
 
