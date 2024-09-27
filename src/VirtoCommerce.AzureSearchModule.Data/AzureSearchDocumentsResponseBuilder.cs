@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Azure.Search.Documents.Models;
 using VirtoCommerce.Platform.Core.Common;
+using VirtoCommerce.SearchModule.Core.Extensions;
 using VirtoCommerce.SearchModule.Core.Model;
 using AzureSearchDocument = Azure.Search.Documents.Models.SearchDocument;
 using FacetResults = System.Collections.Generic.IDictionary<string, System.Collections.Generic.IList<Azure.Search.Documents.Models.FacetResult>>;
@@ -52,6 +53,8 @@ namespace VirtoCommerce.AzureSearchModule.Data
                     result[key] = value;
                 }
             }
+
+            result.SetRelevanceScore(searchResult.Score);
 
             return result;
         }
