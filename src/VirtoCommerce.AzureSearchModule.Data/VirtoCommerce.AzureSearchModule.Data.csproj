@@ -16,6 +16,6 @@
     <PackageReference Include="Microsoft.Azure.Search" Version="10.1.0" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
     <PackageReference Include="Microsoft.Spatial" Version="7.6.3" />
-    <PackageReference Include="VirtoCommerce.SearchModule.Core" Version="3.803.0-alpha.746-vcst-1454" />
+    <PackageReference Include="VirtoCommerce.SearchModule.Core" Version="3.803.0" />
   </ItemGroup>
 </Project>
