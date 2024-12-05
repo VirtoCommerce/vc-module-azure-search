@@ -1,0 +1,20 @@
+{
+    "settings": {
+        "VirtoCommerce.Search.AzureSearch": {
+            "TokenFilter": {
+                "title": "トークンフィルター",
+                "description": "検索可能なフィールドをインデックスする際に使用するトークンフィルターを選択します。これにはインデックスの再構築が必要です"
+            },
+            "NGramTokenFilter": {
+                "MinGram": {
+                    "title": "最小グラム長",
+                    "description": "グラムの最小文字数。これにはインデックスの再構築が必要です"
+                },
+                "MaxGram": {
+                    "title": "最大グラム長",
+                    "description": "グラムの最大文字数。これにはインデックスの再構築が必要です"
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,20 @@
+{
+    "settings": {
+        "VirtoCommerce.Search.AzureSearch": {
+            "TokenFilter": {
+                "title": "Filtro token",
+                "description": "Scegli il filtro token da applicare durante l'indicizzazione dei campi ricercabili. Ciò richiede la ricostruzione dell'indice"
+            },
+            "NGramTokenFilter": {
+                "MinGram": {
+                    "title": "Lunghezza minima del gram",
+                    "description": "Il numero minimo di caratteri in un gram. Ciò richiede la ricostruzione dell'indice"
+                },
+                "MaxGram": {
+                    "title": "Lunghezza massima del gram",
+                    "description": "Il numero massimo di caratteri in un gram. Ciò richiede la ricostruzione dell'indice"
+                }
+            }
+        }
+    }
+}
