@@ -1,0 +1,20 @@
+{
+    "settings": {
+        "VirtoCommerce.Search.AzureSearch": {
+            "TokenFilter": {
+                "title": "令牌过滤器",
+                "description": "选择应用于索引可搜索字段的令牌过滤器。这需要重建索引"
+            },
+            "NGramTokenFilter": {
+                "MinGram": {
+                    "title": "最小gram长度",
+                    "description": "gram中的最小字符数。这需要重建索引"
+                },
+                "MaxGram": {
+                    "title": "最大gram长度",
+                    "description": "gram中的最大字符数。这需要重建索引"
+                }
+            }
+        }
+    }
+}
