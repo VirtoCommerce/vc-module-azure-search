@@ -71,18 +71,15 @@ namespace VirtoCommerce.AzureSearchModule.Data
             var builder = new StringBuilder();
             var valuesCount = 0;
 
-            foreach (var value in values)
+            foreach (var value in values.Where(x => !x.IsNullOrEmpty()))
             {
-                if (!string.IsNullOrEmpty(value))
+                if (valuesCount > 0)
                 {
-                    if (valuesCount > 0)
-                    {
-                        builder.Append(separator);
-                    }
-
-                    builder.Append(value);
-                    valuesCount++;
+                    builder.Append(separator);
                 }
+
+                builder.Append(value);
+                valuesCount++;
             }
 
             if (valuesCount > 1 && encloseInParenthesis)
