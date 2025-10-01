@@ -2,6 +2,7 @@ using VirtoCommerce.AzureSearchModule.Data;
 using Xunit;
 
 namespace VirtoCommerce.AzureSearchModule.Tests;
+
 public class AzureSearchHelperTests
 {
     [Theory]
