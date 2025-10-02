@@ -13,10 +13,7 @@ Azure Search provider are configurable by these configuration keys:
 * **Search.AzureSearch.QueryParserType** is type of Query Languages. Simple (default) or Full.
 * **Search.Scope** is a common name (prefix) of all indexes. Each document type is stored in a separate index. Full index name is `scope-{documenttype}`. One search service can serve multiple indexes.
 
-
-[Read more about configuration here](https://virtocommerce.com/docs/user-guide/configuration-settings/)
-
-## Query Languages
+## Query languages
 
 Azure Cognitive Search implements two query languages:
 1. [Simple Query](https://learn.microsoft.com/en-us/azure/search/query-simple-syntax)
@@ -29,7 +26,7 @@ The Lucene/Full parser supports complex query formats, such as field-scoped quer
 The additional power comes with additional processing requirements so you should expect a slightly longer execution time. 
 
 
-## Fuzzy Search
+## Fuzzy search
 
 Azure Cognitive Search supports fuzzy search a type of query that compensates for typos and misspelled terms in the input string.
 
@@ -49,15 +46,19 @@ For example, if your query (`SearchRequest.SearchKeywords`) has three terms "uni
 
 ## Documentation
 
-* [Search Fundamentals](https://virtocommerce.com/docs/fundamentals/search/)
+* [Azure Search module user documentation](https://docs.virtocommerce.org/platform/user-guide/azure-search/overview/)
+* [Azure Search module developer documentation](https://docs.virtocommerce.org/platform/developer-guide/Fundamentals/Indexed-Search/integration/configuring-azure-cognitive-search/)
+* [REST API](https://virtostart-demo-admin.govirto.com/docs/index.html?urls.primaryName=VirtoCommerce.AzureSearch)
+* [Azure Search configuration](https://docs.virtocommerce.org/platform/developer-guide/Configuration-Reference/appsettingsjson/#azure-search)
+* [View on GitHub](https://github.com/VirtoCommerce/vc-module-azure-search)
 
 ## References
 
-* Deploy: https://virtocommerce.com/docs/latest/developer-guide/deploy-module-from-source-code/
-* Installation: https://www.virtocommerce.com/docs/latest/user-guide/modules/
-* Home: https://virtocommerce.com
-* Community: https://www.virtocommerce.org
-* [Download Latest Release](https://github.com/VirtoCommerce/vc-module-catalog/releases/latest)
+* [Deployment](https://docs.virtocommerce.org/platform/developer-guide/Tutorials-and-How-tos/Tutorials/deploy-module-from-source-code/)
+* [Installation](https://docs.virtocommerce.org/platform/user-guide/modules-installation/)
+* [Home](https://virtocommerce.com)
+* [Community](https://www.virtocommerce.org)
+* [Download latest release](https://github.com/VirtoCommerce/vc-module-azure-search/releases/latest)
 
 ## License
 
