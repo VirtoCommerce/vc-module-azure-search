@@ -1,14 +1,9 @@
 using System;
 
-namespace VirtoCommerce.AzureSearchModule.Tests
-{
-    public class PriorityAttribute : Attribute
-    {
-        public PriorityAttribute(int priority)
-        {
-            Priority = priority;
-        }
+namespace VirtoCommerce.AzureSearchModule.Tests;
 
-        public int Priority { get; }
-    }
+[AttributeUsage(AttributeTargets.Method)]
+public class PriorityAttribute(int priority) : Attribute
+{
+    public int Priority { get; } = priority;
 }
