@@ -11,16 +11,19 @@ using VirtoCommerce.SearchModule.Core.Model;
 
 namespace VirtoCommerce.AzureSearchModule.Data
 {
-    public static class AzureSearchHelper
+    public static partial class AzureSearchHelper
     {
         public const string FieldNamePrefix = "f_";
         public const string RawKeyFieldName = "__id";
         public const string KeyFieldName = FieldNamePrefix + RawKeyFieldName;
         public const string NonExistentFieldFilter = KeyFieldName + " eq ''";
 
+        [GeneratedRegex(@"\W")]
+        private static partial Regex NonWordRegex();
+
         public static string ToAzureFieldName(string fieldName)
         {
-            return !string.IsNullOrEmpty(fieldName) ? FieldNamePrefix + Regex.Replace(fieldName, @"\W", "_").ToLowerInvariant() : null;
+            return !string.IsNullOrEmpty(fieldName) ? FieldNamePrefix + NonWordRegex().Replace(fieldName, "_").ToLowerInvariant() : null;
         }
 
         public static string FromAzureFieldName(string azureFieldName)
@@ -68,24 +71,21 @@ namespace VirtoCommerce.AzureSearchModule.Data
             var builder = new StringBuilder();
             var valuesCount = 0;
 
-            foreach (var value in values)
+            foreach (var value in values.Where(x => !x.IsNullOrEmpty()))
             {
-                if (!string.IsNullOrEmpty(value))
+                if (valuesCount > 0)
                 {
-                    if (valuesCount > 0)
-                    {
-                        builder.Append(separator);
-                    }
-
-                    builder.Append(value);
-                    valuesCount++;
+                    builder.Append(separator);
                 }
+
+                builder.Append(value);
+                valuesCount++;
             }
 
             if (valuesCount > 1 && encloseInParenthesis)
             {
-                builder.Insert(0, "(");
-                builder.Append(")");
+                builder.Insert(0, '(');
+                builder.Append(')');
             }
 
             return builder.ToString();
