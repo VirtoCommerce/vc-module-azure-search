@@ -1,0 +1,20 @@
+{
+  "settings": {
+    "VirtoCommerce.Search.AzureSearch": {
+      "TokenFilter": {
+        "title": "Token-suodatin",
+        "description": "Valitse token-suodatin, jota käytetään haettavien kenttien indeksoinnissa. Tämä vaatii indeksin uudelleenrakentamisen"
+      },
+      "NGramTokenFilter": {
+        "MinGram": {
+          "title": "Minimi gram-pituus",
+          "description": "Grammin pienin merkkimäärä. Tämä vaatii indeksin uudelleenrakentamisen"
+        },
+        "MaxGram": {
+          "title": "Maksimi gram-pituus",
+          "description": "Grammin suurin merkkimäärä. Tämä vaatii indeksin uudelleenrakentamisen"
+        }
+      }
+    }
+  }
+}
