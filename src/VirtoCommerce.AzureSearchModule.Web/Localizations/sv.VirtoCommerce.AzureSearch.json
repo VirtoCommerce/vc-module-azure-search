@@ -1,0 +1,20 @@
+{
+  "settings": {
+    "VirtoCommerce.Search.AzureSearch": {
+      "TokenFilter": {
+        "title": "Tokenfilter",
+        "description": "Välj tokenfilter som ska tillämpas vid indexering av sökbara fält. Detta kräver ombyggnad av indexet"
+      },
+      "NGramTokenFilter": {
+        "MinGram": {
+          "title": "Minsta gramlängd",
+          "description": "Minsta antal tecken i en gram. Detta kräver ombyggnad av indexet"
+        },
+        "MaxGram": {
+          "title": "Största gramlängd",
+          "description": "Största antal tecken i en gram. Detta kräver ombyggnad av indexet"
+        }
+      }
+    }
+  }
+}
