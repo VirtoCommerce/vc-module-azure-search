@@ -34,14 +34,14 @@ namespace VirtoCommerce.AzureSearchModule.Data
         public static Field Get(this IList<Field> fields, string rawName)
         {
             var azureFieldName = ToAzureFieldName(rawName);
-            return fields?.FirstOrDefault(f => f.Name.EqualsInvariant(azureFieldName));
+            return fields?.FirstOrDefault(f => f.Name.EqualsIgnoreCase(azureFieldName));
         }
 
 
         public static SearchField Get(this IList<SearchField> fields, string rawName)
         {
             var azureFieldName = ToAzureFieldName(rawName);
-            return fields?.FirstOrDefault(f => f.Name.EqualsInvariant(azureFieldName));
+            return fields?.FirstOrDefault(f => f.Name.EqualsIgnoreCase(azureFieldName));
         }
 
         public static string ToStringInvariant(this object value)

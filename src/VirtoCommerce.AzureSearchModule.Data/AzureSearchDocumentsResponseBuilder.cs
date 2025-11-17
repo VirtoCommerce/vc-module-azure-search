@@ -36,7 +36,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
             {
                 var key = AzureSearchHelper.FromAzureFieldName(docKey);
 
-                if (key.EqualsInvariant(AzureSearchHelper.RawKeyFieldName))
+                if (key.EqualsIgnoreCase(AzureSearchHelper.RawKeyFieldName))
                 {
                     result.Id = docValue.ToStringInvariant();
                 }
@@ -153,7 +153,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
             {
                 foreach (var value in values)
                 {
-                    var facetResult = facetResults.FirstOrDefault(r => r.Value.ToStringInvariant().EqualsInvariant(value));
+                    var facetResult = facetResults.FirstOrDefault(r => r.Value.ToStringInvariant().EqualsIgnoreCase(value));
                     AddAggregationValue(result, facetResult, value);
                 }
             }
