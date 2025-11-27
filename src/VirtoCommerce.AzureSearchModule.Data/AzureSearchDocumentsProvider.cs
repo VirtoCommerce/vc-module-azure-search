@@ -680,7 +680,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
             {
                 //take original field without the suffix
                 var originalFieldName = suggestField.Name.Replace(SuggestFieldSuffix, string.Empty);
-                var originalSuggestField = providerFields.FirstOrDefault(x => x.Name.EqualsInvariant(originalFieldName));
+                var originalSuggestField = providerFields.FirstOrDefault(x => x.Name.EqualsIgnoreCase(originalFieldName));
                 if (originalSuggestField != null)
                 {
                     suggestSourceFields.Add(originalSuggestField.Name);
