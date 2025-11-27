@@ -27,10 +27,10 @@ public static class ApplicationBuilderExtensions
             var documentTypes = configurations.Select(c => c.DocumentType).Distinct();
             var options = serviceProvider.GetRequiredService<IOptions<SearchOptions>>().Value;
 
-            if (options.Provider.EqualsInvariant(name))
+            if (options.Provider.EqualsIgnoreCase(name))
             {
                 var otherProviderDocumentTypes = options.DocumentScopes
-                    .Where(x => !string.IsNullOrEmpty(x.Provider) && !x.Provider.EqualsInvariant(name))
+                    .Where(x => !string.IsNullOrEmpty(x.Provider) && !x.Provider.EqualsIgnoreCase(name))
                     .Select(x => x.DocumentType);
 
                 documentTypes = documentTypes.Except(otherProviderDocumentTypes, StringComparer.OrdinalIgnoreCase);
@@ -38,7 +38,7 @@ public static class ApplicationBuilderExtensions
             else
             {
                 var currentProviderDocumentTypes = options.DocumentScopes
-                    .Where(x => x.Provider.EqualsInvariant(name))
+                    .Where(x => x.Provider.EqualsIgnoreCase(name))
                     .Select(x => x.DocumentType);
 
                 documentTypes = documentTypes.Intersect(currentProviderDocumentTypes, StringComparer.OrdinalIgnoreCase);

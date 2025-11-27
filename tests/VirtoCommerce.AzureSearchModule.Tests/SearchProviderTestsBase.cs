@@ -134,7 +134,7 @@ namespace VirtoCommerce.AzureSearchModule.Tests
 
             if (response?.Aggregations?.Count > 0)
             {
-                result = response.Aggregations.SingleOrDefault(a => a.Id.EqualsInvariant(aggregationId));
+                result = response.Aggregations.SingleOrDefault(x => x.Id.EqualsIgnoreCase(aggregationId));
             }
 
             return result;
