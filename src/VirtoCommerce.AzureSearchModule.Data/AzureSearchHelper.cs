@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using Azure.Search.Documents.Indexes.Models;
-using Microsoft.Azure.Search.Models;
 using Newtonsoft.Json;
 using VirtoCommerce.Platform.Core.Common;
 using VirtoCommerce.SearchModule.Core.Model;
@@ -30,13 +29,6 @@ namespace VirtoCommerce.AzureSearchModule.Data
         {
             return azureFieldName.StartsWith(FieldNamePrefix) ? azureFieldName.Substring(FieldNamePrefix.Length) : azureFieldName;
         }
-
-        public static Field Get(this IList<Field> fields, string rawName)
-        {
-            var azureFieldName = ToAzureFieldName(rawName);
-            return fields?.FirstOrDefault(f => f.Name.EqualsIgnoreCase(azureFieldName));
-        }
-
 
         public static SearchField Get(this IList<SearchField> fields, string rawName)
         {
