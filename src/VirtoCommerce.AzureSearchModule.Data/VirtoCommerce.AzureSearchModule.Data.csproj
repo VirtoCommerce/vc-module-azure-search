@@ -13,7 +13,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Azure.Search.Documents" Version="11.6.0-beta.4" />
-    <PackageReference Include="Microsoft.Spatial" Version="8.4.3" />
+    <PackageReference Include="Microsoft.Spatial" Version="7.6.3" />
     <PackageReference Include="VirtoCommerce.SearchModule.Core" Version="3.1000.0" />
   </ItemGroup>
 </Project>
