@@ -44,8 +44,32 @@ For example, if your query (`SearchRequest.SearchKeywords`) has three terms "uni
 * When `QueryParserType` is set to `Full`, [Lucene syntax rules](https://learn.microsoft.com/en-us/azure/search/query-lucene-syntax) are applied to the search string. 
   In order to use any of the search operators as part of the search text, [escape](https://learn.microsoft.com/en-us/azure/search/query-lucene-syntax#escaping-special-characters) the character by prefixing it with a single backslash (`\`).
 
+## Logging
+
+This module uses **structured logging**: every log entry is a stable, parameterized
+message template, with all variable runtime data (index, service, document type,
+HTTP status, request id, etc.) emitted as discrete named properties rather than
+concatenated into the message. Exceptions are always passed as the `Exception`
+argument so the logging pipeline can serialize them into structured fields.
+
+```csharp
+// ✅ stable template + structured properties (groupable, alertable)
+_logger.LogError(ex,
+    "Failed to index documents in {Operation} for {DocumentType} on index {SearchIndex} in service {SearchService}. HTTP {HttpStatus}, error code {ErrorCode}, request id {AzureRequestId}",
+    nameof(IndexWithRetryAsync), documentType, indexName, _azureSearchOptions.SearchServiceName,
+    exception.Status, exception.ErrorCode, GetAzureRequestId(exception));
+```
+
+This keeps every occurrence of the same logical event identical, so downstream sinks
+(e.g. New Relic) can group, filter, alert, and build dashboards on the discrete
+fields. New contributions to this module must follow the same pattern.
+
+See [Logging conventions](docs/logging-conventions.md) for the full rules, the
+property glossary, and before/after examples.
+
 ## Documentation
 
+* [Logging conventions](docs/logging-conventions.md)
 * [Azure Search module user documentation](https://docs.virtocommerce.org/platform/user-guide/azure-search/overview/)
 * [Azure Search module developer documentation](https://docs.virtocommerce.org/platform/developer-guide/Fundamentals/Indexed-Search/integration/configuring-azure-cognitive-search/)
 * [REST API](https://virtostart-demo-admin.govirto.com/docs/index.html?urls.primaryName=VirtoCommerce.AzureSearch)
