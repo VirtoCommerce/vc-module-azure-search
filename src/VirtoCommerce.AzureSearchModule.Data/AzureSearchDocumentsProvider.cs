@@ -259,7 +259,9 @@ namespace VirtoCommerce.AzureSearchModule.Data
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to add active alias on default index in {Operation}", nameof(AddActiveAlias));
+                _logger.LogError(ex,
+                    "Failed to add active alias on default index in {Operation} in service {SearchService}",
+                    nameof(AddActiveAlias), _azureSearchOptions.SearchServiceName);
             }
         }
 
@@ -338,8 +340,20 @@ namespace VirtoCommerce.AzureSearchModule.Data
         {
             var createIndexResult = await InternalCreateIndexAsync(documentType, documents, parameters);
 
-            var result = await IndexWithRetryAsync(createIndexResult.IndexName, documentType, createIndexResult.ProviderDocuments, 10, parameters.PartialUpdate);
-            return result;
+            try
+            {
+                var result = await IndexWithRetryAsync(createIndexResult.IndexName, createIndexResult.ProviderDocuments, 10, parameters.PartialUpdate);
+                return result;
+            }
+            catch (RequestFailedException exception)
+            {
+                _logger.LogError(exception,
+                    "Failed to index documents in {Operation} for {DocumentType} on index {SearchIndex} in service {SearchService}. HTTP {HttpStatus}, error code {ErrorCode}, request id {AzureRequestId}",
+                    nameof(IndexWithRetryAsync), documentType, createIndexResult.IndexName, _azureSearchOptions.SearchServiceName,
+                    exception.Status, exception.ErrorCode, GetAzureRequestId(exception));
+
+                throw new SearchException("Failed to index documents", exception);
+            }
         }
 
         protected virtual async Task<CreateIndexResult> InternalCreateIndexAsync(string documentType, IList<IndexDocument> documents, IndexingParameters parameters)
@@ -378,7 +392,19 @@ namespace VirtoCommerce.AzureSearchModule.Data
 
             if (updateMapping)
             {
-                await UpdateMapping(indexName, documentType, providerFields);
+                try
+                {
+                    await UpdateMapping(indexName, providerFields);
+                }
+                catch (RequestFailedException exception)
+                {
+                    _logger.LogError(exception,
+                        "Failed to update index mapping in {Operation} for {DocumentType} on index {SearchIndex} in service {SearchService}. HTTP {HttpStatus}, error code {ErrorCode}, request id {AzureRequestId}",
+                        nameof(UpdateMapping), documentType, indexName, _azureSearchOptions.SearchServiceName,
+                        exception.Status, exception.ErrorCode, GetAzureRequestId(exception));
+
+                    throw new SearchException("Failed to update index mapping", exception);
+                }
             }
 
             return new CreateIndexResult
@@ -559,7 +585,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
             }
         }
 
-        protected virtual async Task<IndexingResult> IndexWithRetryAsync(string indexName, string documentType, IList<SearchDocument> providerDocuments, int retryCount, bool partialUpdate)
+        protected virtual async Task<IndexingResult> IndexWithRetryAsync(string indexName, IList<SearchDocument> providerDocuments, int retryCount, bool partialUpdate)
         {
             if (providerDocuments.Count == 0)
             {
@@ -587,15 +613,8 @@ namespace VirtoCommerce.AzureSearchModule.Data
                     // Need to wait some time until new mapping is applied
                     await Task.Delay(MillisecondsDelay);
                 }
-                catch (RequestFailedException exception)
-                {
-                    _logger.LogError(exception,
-                        "Failed to index documents in {Operation} for {DocumentType} on index {SearchIndex} in service {SearchService}. HTTP {HttpStatus}, error code {ErrorCode}, request id {AzureRequestId}",
-                        nameof(IndexWithRetryAsync), documentType, indexName, _azureSearchOptions.SearchServiceName,
-                        exception.Status, exception.ErrorCode, GetAzureRequestId(exception));
-
-                    throw new SearchException("Failed to index documents", exception);
-                }
+                // Any other RequestFailedException propagates to the caller (InternalIndexAsync),
+                // which logs it with full document-type context and wraps it in a SearchException.
             }
 
             return result;
@@ -760,25 +779,14 @@ namespace VirtoCommerce.AzureSearchModule.Data
             return providerFields;
         }
 
-        protected virtual async Task UpdateMapping(string indexName, string documentType, IList<SearchField> providerFields)
+        protected virtual async Task UpdateMapping(string indexName, IList<SearchField> providerFields)
         {
             var index = CreateIndexDefinition(indexName, providerFields);
 
-            try
-            {
-
-                var updatedIndex = await Client.CreateOrUpdateIndexAsync(index);
-                AddMappingToCache(indexName, updatedIndex.Value.Fields);
-            }
-            catch (RequestFailedException exception)
-            {
-                _logger.LogError(exception,
-                    "Failed to update index mapping in {Operation} for {DocumentType} on index {SearchIndex} in service {SearchService}. HTTP {HttpStatus}, error code {ErrorCode}, request id {AzureRequestId}",
-                    nameof(UpdateMapping), documentType, indexName, _azureSearchOptions.SearchServiceName,
-                    exception.Status, exception.ErrorCode, GetAzureRequestId(exception));
-
-                throw new SearchException("Failed to update index mapping", exception);
-            }
+            // RequestFailedException propagates to the caller (InternalCreateIndexAsync),
+            // which logs it with full document-type context and wraps it in a SearchException.
+            var updatedIndex = await Client.CreateOrUpdateIndexAsync(index);
+            AddMappingToCache(indexName, updatedIndex.Value.Fields);
         }
 
         protected virtual IList<SearchField> GetMappingFromCache(string indexName)
