@@ -94,9 +94,9 @@ namespace VirtoCommerce.AzureSearchModule.Data
             catch (RequestFailedException ex)
             {
                 _logger.LogError(ex,
-                    "Failed to delete index in {Operation} for {DocumentType} on index {SearchIndex} in service {SearchService}. HTTP {HttpStatus}, error code {ErrorCode}, request id {AzureRequestId}",
+                    "Failed to delete index in {Operation} for {DocumentType} on index {SearchIndex} in service {SearchService}. HTTP {HttpStatus}, error code {ErrorCode}",
                     nameof(DeleteIndexAsync), documentType, indexAlias, _azureSearchOptions.SearchServiceName,
-                    ex.Status, ex.ErrorCode, GetAzureRequestId(ex));
+                    ex.Status, ex.ErrorCode);
 
                 throw new SearchException("Failed to delete index", ex);
             }
@@ -137,9 +137,9 @@ namespace VirtoCommerce.AzureSearchModule.Data
             catch (RequestFailedException ex)
             {
                 _logger.LogError(ex,
-                    "Failed to remove documents in {Operation} for {DocumentType} on index {SearchIndex} in service {SearchService}. HTTP {HttpStatus}, error code {ErrorCode}, request id {AzureRequestId}",
+                    "Failed to remove documents in {Operation} for {DocumentType} on index {SearchIndex} in service {SearchService}. HTTP {HttpStatus}, error code {ErrorCode}",
                     nameof(RemoveAsync), documentType, indexName, _azureSearchOptions.SearchServiceName,
-                    ex.Status, ex.ErrorCode, GetAzureRequestId(ex));
+                    ex.Status, ex.ErrorCode);
 
                 throw new SearchException("Failed to remove documents", ex);
             }
@@ -180,9 +180,9 @@ namespace VirtoCommerce.AzureSearchModule.Data
             catch (RequestFailedException ex)
             {
                 _logger.LogError(ex,
-                    "Failed to execute search in {Operation} for {DocumentType} on index {SearchIndex} in service {SearchService}. HTTP {HttpStatus}, error code {ErrorCode}, request id {AzureRequestId}",
+                    "Failed to execute search in {Operation} for {DocumentType} on index {SearchIndex} in service {SearchService}. HTTP {HttpStatus}, error code {ErrorCode}",
                     nameof(SearchAsync), documentType, indexName, _azureSearchOptions.SearchServiceName,
-                    ex.Status, ex.ErrorCode, GetAzureRequestId(ex));
+                    ex.Status, ex.ErrorCode);
 
                 throw new SearchException("Failed to execute search", ex);
             }
@@ -225,9 +225,9 @@ namespace VirtoCommerce.AzureSearchModule.Data
             catch (RequestFailedException ex)
             {
                 _logger.LogError(ex,
-                    "Failed to get suggestions in {Operation} for {DocumentType} on index {SearchIndex} in service {SearchService}. HTTP {HttpStatus}, error code {ErrorCode}, request id {AzureRequestId}",
+                    "Failed to get suggestions in {Operation} for {DocumentType} on index {SearchIndex} in service {SearchService}. HTTP {HttpStatus}, error code {ErrorCode}",
                     nameof(GetSuggestionsAsync), documentType, indexName, _azureSearchOptions.SearchServiceName,
-                    ex.Status, ex.ErrorCode, GetAzureRequestId(ex));
+                    ex.Status, ex.ErrorCode);
 
                 throw new SearchException("Failed to get suggestions", ex);
             }
@@ -348,9 +348,9 @@ namespace VirtoCommerce.AzureSearchModule.Data
             catch (RequestFailedException exception)
             {
                 _logger.LogError(exception,
-                    "Failed to index documents in {Operation} for {DocumentType} on index {SearchIndex} in service {SearchService}. HTTP {HttpStatus}, error code {ErrorCode}, request id {AzureRequestId}",
+                    "Failed to index documents in {Operation} for {DocumentType} on index {SearchIndex} in service {SearchService}. HTTP {HttpStatus}, error code {ErrorCode}",
                     nameof(IndexWithRetryAsync), documentType, createIndexResult.IndexName, _azureSearchOptions.SearchServiceName,
-                    exception.Status, exception.ErrorCode, GetAzureRequestId(exception));
+                    exception.Status, exception.ErrorCode);
 
                 throw new SearchException("Failed to index documents", exception);
             }
@@ -382,9 +382,9 @@ namespace VirtoCommerce.AzureSearchModule.Data
                 catch (RequestFailedException exception)
                 {
                     _logger.LogError(exception,
-                        "Failed to create index in {Operation} for {DocumentType} on index {SearchIndex} in service {SearchService}. HTTP {HttpStatus}, error code {ErrorCode}, request id {AzureRequestId}",
+                        "Failed to create index in {Operation} for {DocumentType} on index {SearchIndex} in service {SearchService}. HTTP {HttpStatus}, error code {ErrorCode}",
                         nameof(InternalCreateIndexAsync), documentType, indexName, _azureSearchOptions.SearchServiceName,
-                        exception.Status, exception.ErrorCode, GetAzureRequestId(exception));
+                        exception.Status, exception.ErrorCode);
 
                     throw new SearchException("Failed to create index", exception);
                 }
@@ -399,9 +399,9 @@ namespace VirtoCommerce.AzureSearchModule.Data
                 catch (RequestFailedException exception)
                 {
                     _logger.LogError(exception,
-                        "Failed to update index mapping in {Operation} for {DocumentType} on index {SearchIndex} in service {SearchService}. HTTP {HttpStatus}, error code {ErrorCode}, request id {AzureRequestId}",
+                        "Failed to update index mapping in {Operation} for {DocumentType} on index {SearchIndex} in service {SearchService}. HTTP {HttpStatus}, error code {ErrorCode}",
                         nameof(UpdateMapping), documentType, indexName, _azureSearchOptions.SearchServiceName,
-                        exception.Status, exception.ErrorCode, GetAzureRequestId(exception));
+                        exception.Status, exception.ErrorCode);
 
                     throw new SearchException("Failed to update index mapping", exception);
                 }
@@ -805,13 +805,6 @@ namespace VirtoCommerce.AzureSearchModule.Data
         }
 
         #endregion
-
-        private static string GetAzureRequestId(RequestFailedException exception)
-        {
-            return exception.GetRawResponse()?.Headers.TryGetValue("x-ms-request-id", out var requestId) == true
-                ? requestId
-                : null;
-        }
 
         protected virtual SearchClient GetSearchIndexClient(string indexName)
         {

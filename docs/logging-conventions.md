@@ -50,10 +50,16 @@ and Serilog (message templates with named placeholders), so that downstream sink
 | `Operation`      | Logical operation / method name (`nameof(...)`)                |
 | `HttpStatus`     | HTTP status code from `RequestFailedException.Status`          |
 | `ErrorCode`      | Service error code from `RequestFailedException.ErrorCode`     |
-| `AzureRequestId` | Azure request id (`x-ms-request-id` response header)           |
 
 Validation events (e.g. field type mismatch) additionally use: `DocumentId`,
 `FieldName`, `DocumentFieldType`, `SchemaFieldType`.
+
+> **Note on the Azure request id.** Azure AI Search's `request-id` response header is the
+> *server operation trace id* intended for Microsoft Support tickets — it is **not** the
+> Portal "Request ID" and is not queryable in Azure Monitor diagnostic logs. For
+> self-service correlation, use Azure Monitor / Log Analytics (`AzureDiagnostics`,
+> `ResourceProvider == "MICROSOFT.SEARCH"`) and pivot on `OperationName` / `IndexName_s` /
+> time. We therefore do **not** emit it as a structured log property.
 
 ## Pattern: log-and-throw
 
@@ -65,9 +71,9 @@ original exception as the inner exception — no concatenated blob:
 catch (RequestFailedException ex)
 {
     _logger.LogError(ex,
-        "Failed to remove documents in {Operation} for {DocumentType} on index {SearchIndex} in service {SearchService}. HTTP {HttpStatus}, error code {ErrorCode}, request id {AzureRequestId}",
+        "Failed to remove documents in {Operation} for {DocumentType} on index {SearchIndex} in service {SearchService}. HTTP {HttpStatus}, error code {ErrorCode}",
         nameof(RemoveAsync), documentType, indexName, _azureSearchOptions.SearchServiceName,
-        ex.Status, ex.ErrorCode, GetAzureRequestId(ex));
+        ex.Status, ex.ErrorCode);
 
     throw new SearchException("Failed to remove documents", ex);
 }
@@ -80,12 +86,11 @@ catch (RequestFailedException ex)
 StatusCode: 404; Content:The index 'sadevdefault-active-member' ... DocumentIds:... ; FieldNames:...
 
 // After — stable template + discrete fields
-message:        "Failed to index documents in IndexWithRetryAsync for member on index sadevdefault-active-member in service hei-selo-dev-ne-srch-1. HTTP 404, error code ..., request id 35e05517-..."
+message:        "Failed to index documents in IndexWithRetryAsync for member on index sadevdefault-active-member in service hei-selo-dev-ne-srch-1. HTTP 404, error code ..."
 Operation:      "IndexWithRetryAsync"
 DocumentType:   "member"
 SearchIndex:    "sadevdefault-active-member"
 SearchService:  "hei-selo-dev-ne-srch-1"
 HttpStatus:     404
-AzureRequestId: "35e05517-4cc1-4f20-bbd1-392266d0cbfc"
 exception:      <structured exception object, incl. inner exceptions and stack>
 ```

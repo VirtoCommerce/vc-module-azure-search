@@ -55,9 +55,9 @@ argument so the logging pipeline can serialize them into structured fields.
 ```csharp
 // ✅ stable template + structured properties (groupable, alertable)
 _logger.LogError(ex,
-    "Failed to index documents in {Operation} for {DocumentType} on index {SearchIndex} in service {SearchService}. HTTP {HttpStatus}, error code {ErrorCode}, request id {AzureRequestId}",
+    "Failed to index documents in {Operation} for {DocumentType} on index {SearchIndex} in service {SearchService}. HTTP {HttpStatus}, error code {ErrorCode}",
     nameof(IndexWithRetryAsync), documentType, indexName, _azureSearchOptions.SearchServiceName,
-    exception.Status, exception.ErrorCode, GetAzureRequestId(exception));
+    exception.Status, exception.ErrorCode);
 ```
 
 This keeps every occurrence of the same logical event identical, so downstream sinks
