@@ -75,9 +75,11 @@ namespace VirtoCommerce.AzureSearchModule.Data
         {
             ArgumentNullException.ThrowIfNull(documentType);
 
+            string indexAlias = null;
+
             try
             {
-                var indexAlias = GetIndexAlias(BackupIndexAlias, documentType);
+                indexAlias = GetIndexAlias(BackupIndexAlias, documentType);
 
                 if (await IndexExistsAsync(indexAlias))
                 {
@@ -91,7 +93,12 @@ namespace VirtoCommerce.AzureSearchModule.Data
             }
             catch (RequestFailedException ex)
             {
-                ThrowException("Failed to delete index", ex);
+                _logger.LogError(ex,
+                    "Failed to delete index in {Operation} for {DocumentType} on index {SearchIndex} in service {SearchService}. HTTP {HttpStatus}, error code {ErrorCode}",
+                    nameof(DeleteIndexAsync), documentType, indexAlias, _azureSearchOptions.SearchServiceName,
+                    ex.Status, ex.ErrorCode);
+
+                throw new SearchException("Failed to delete index", ex);
             }
         }
 
@@ -112,10 +119,11 @@ namespace VirtoCommerce.AzureSearchModule.Data
         public virtual async Task<IndexingResult> RemoveAsync(string documentType, IList<IndexDocument> documents)
         {
             IndexingResult result;
+            string indexName = null;
 
             try
             {
-                var indexName = GetIndexName(ActiveIndexAlias, documentType);
+                indexName = GetIndexName(ActiveIndexAlias, documentType);
 
                 var providerDocuments = documents.Select(document => ConvertToProviderDocument(document, null, documentType)).ToList();
 
@@ -128,7 +136,12 @@ namespace VirtoCommerce.AzureSearchModule.Data
             }
             catch (RequestFailedException ex)
             {
-                throw new SearchException(ex.Message, ex);
+                _logger.LogError(ex,
+                    "Failed to remove documents in {Operation} for {DocumentType} on index {SearchIndex} in service {SearchService}. HTTP {HttpStatus}, error code {ErrorCode}",
+                    nameof(RemoveAsync), documentType, indexName, _azureSearchOptions.SearchServiceName,
+                    ex.Status, ex.ErrorCode);
+
+                throw new SearchException("Failed to remove documents", ex);
             }
 
             return result;
@@ -164,9 +177,22 @@ namespace VirtoCommerce.AzureSearchModule.Data
 
                 return result;
             }
+            catch (RequestFailedException ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to execute search in {Operation} for {DocumentType} on index {SearchIndex} in service {SearchService}. HTTP {HttpStatus}, error code {ErrorCode}",
+                    nameof(SearchAsync), documentType, indexName, _azureSearchOptions.SearchServiceName,
+                    ex.Status, ex.ErrorCode);
+
+                throw new SearchException("Failed to execute search", ex);
+            }
             catch (Exception ex)
             {
-                throw new SearchException(ex.Message, ex);
+                _logger.LogError(ex,
+                    "Failed to execute search in {Operation} for {DocumentType} on index {SearchIndex} in service {SearchService}",
+                    nameof(SearchAsync), documentType, indexName, _azureSearchOptions.SearchServiceName);
+
+                throw new SearchException("Failed to execute search", ex);
             }
         }
 
@@ -179,9 +205,11 @@ namespace VirtoCommerce.AzureSearchModule.Data
                 return result;
             }
 
+            string indexName = null;
+
             try
             {
-                var indexName = GetIndexName(documentType);
+                indexName = GetIndexName(documentType);
 
                 var indexClient = GetSearchIndexClient(indexName);
 
@@ -196,7 +224,12 @@ namespace VirtoCommerce.AzureSearchModule.Data
             }
             catch (RequestFailedException ex)
             {
-                throw new SearchException(ex.Message, ex);
+                _logger.LogError(ex,
+                    "Failed to get suggestions in {Operation} for {DocumentType} on index {SearchIndex} in service {SearchService}. HTTP {HttpStatus}, error code {ErrorCode}",
+                    nameof(GetSuggestionsAsync), documentType, indexName, _azureSearchOptions.SearchServiceName,
+                    ex.Status, ex.ErrorCode);
+
+                throw new SearchException("Failed to get suggestions", ex);
             }
 
             return result;
@@ -226,7 +259,9 @@ namespace VirtoCommerce.AzureSearchModule.Data
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error while putting an active alias on a default index at {nameof(AddActiveAlias)}. Possible fail on Elastic server side at IndexExists check.");
+                _logger.LogError(ex,
+                    "Failed to add active alias on default index in {Operation} in service {SearchService}",
+                    nameof(AddActiveAlias), _azureSearchOptions.SearchServiceName);
             }
         }
 
@@ -305,8 +340,20 @@ namespace VirtoCommerce.AzureSearchModule.Data
         {
             var createIndexResult = await InternalCreateIndexAsync(documentType, documents, parameters);
 
-            var result = await IndexWithRetryAsync(createIndexResult.IndexName, createIndexResult.ProviderDocuments, 10, parameters.PartialUpdate);
-            return result;
+            try
+            {
+                var result = await IndexWithRetryAsync(createIndexResult.IndexName, createIndexResult.ProviderDocuments, 10, parameters.PartialUpdate);
+                return result;
+            }
+            catch (RequestFailedException exception)
+            {
+                _logger.LogError(exception,
+                    "Failed to index documents in {Operation} for {DocumentType} on index {SearchIndex} in service {SearchService}. HTTP {HttpStatus}, error code {ErrorCode}",
+                    nameof(IndexWithRetryAsync), documentType, createIndexResult.IndexName, _azureSearchOptions.SearchServiceName,
+                    exception.Status, exception.ErrorCode);
+
+                throw new SearchException("Failed to index documents", exception);
+            }
         }
 
         protected virtual async Task<CreateIndexResult> InternalCreateIndexAsync(string documentType, IList<IndexDocument> documents, IndexingParameters parameters)
@@ -334,13 +381,30 @@ namespace VirtoCommerce.AzureSearchModule.Data
                 }
                 catch (RequestFailedException exception)
                 {
-                    ThrowException(exception, providerFields: providerFields);
+                    _logger.LogError(exception,
+                        "Failed to create index in {Operation} for {DocumentType} on index {SearchIndex} in service {SearchService}. HTTP {HttpStatus}, error code {ErrorCode}",
+                        nameof(InternalCreateIndexAsync), documentType, indexName, _azureSearchOptions.SearchServiceName,
+                        exception.Status, exception.ErrorCode);
+
+                    throw new SearchException("Failed to create index", exception);
                 }
             }
 
             if (updateMapping)
             {
-                await UpdateMapping(indexName, providerFields);
+                try
+                {
+                    await UpdateMapping(indexName, providerFields);
+                }
+                catch (RequestFailedException exception)
+                {
+                    _logger.LogError(exception,
+                        "Failed to update index mapping in {Operation} for {DocumentType} on index {SearchIndex} in service {SearchService}. HTTP {HttpStatus}, error code {ErrorCode}",
+                        nameof(UpdateMapping), documentType, indexName, _azureSearchOptions.SearchServiceName,
+                        exception.Status, exception.ErrorCode);
+
+                    throw new SearchException("Failed to update index mapping", exception);
+                }
             }
 
             return new CreateIndexResult
@@ -392,8 +456,11 @@ namespace VirtoCommerce.AzureSearchModule.Data
 
                     if (!FieldTypeMatch(providerFieldType, providerField.Type))
                     {
-                        var message = $"Field type mismatch. Document type: {documentType}. Document Id: {document.Id}. Field name: {field.Name}. Document field type: {providerFieldType}. Schema field type: {providerField.Type}";
-                        ThrowException(message, null);
+                        _logger.LogError(
+                            "Field type mismatch for {DocumentType} document {DocumentId}, field {FieldName}: document field type {DocumentFieldType} does not match schema field type {SchemaFieldType}",
+                            documentType, document.Id, field.Name, providerFieldType, providerField.Type);
+
+                        throw new SearchException("Field type mismatch", null);
                     }
 
                     var value = GetFieldValue(field, isGeoPoint, isComplex, isCollection);
@@ -546,10 +613,8 @@ namespace VirtoCommerce.AzureSearchModule.Data
                     // Need to wait some time until new mapping is applied
                     await Task.Delay(MillisecondsDelay);
                 }
-                catch (RequestFailedException exception)
-                {
-                    ThrowException(exception, providerDocuments: providerDocuments);
-                }
+                // Any other RequestFailedException propagates to the caller (InternalIndexAsync),
+                // which logs it with full document-type context and wraps it in a SearchException.
             }
 
             return result;
@@ -718,16 +783,10 @@ namespace VirtoCommerce.AzureSearchModule.Data
         {
             var index = CreateIndexDefinition(indexName, providerFields);
 
-            try
-            {
-
-                var updatedIndex = await Client.CreateOrUpdateIndexAsync(index);
-                AddMappingToCache(indexName, updatedIndex.Value.Fields);
-            }
-            catch (RequestFailedException exception)
-            {
-                ThrowException(exception, providerFields: providerFields);
-            }
+            // RequestFailedException propagates to the caller (InternalCreateIndexAsync),
+            // which logs it with full document-type context and wraps it in a SearchException.
+            var updatedIndex = await Client.CreateOrUpdateIndexAsync(index);
+            AddMappingToCache(indexName, updatedIndex.Value.Fields);
         }
 
         protected virtual IList<SearchField> GetMappingFromCache(string indexName)
@@ -746,30 +805,6 @@ namespace VirtoCommerce.AzureSearchModule.Data
         }
 
         #endregion
-
-        private void ThrowException(string message, Exception innerException)
-        {
-            throw new SearchException($"{message}. Search service name: {_azureSearchOptions.SearchServiceName}, Scope: {_searchOptions.Scope}", innerException);
-        }
-
-        private static void ThrowException(RequestFailedException exception, IList<SearchField> providerFields = null, IEnumerable<SearchDocument> providerDocuments = null)
-        {
-            var error = $"StatusCode: {exception.Status}; Content:{exception.Message}";
-
-            if (providerDocuments != null)
-            {
-                var documentIds = string.Join(',', providerDocuments.Select(x => x.GetString(AzureSearchHelper.ToAzureFieldName("id"))));
-                error = $"{error}; DocumentIds:{documentIds}";
-            }
-
-            if (providerFields != null)
-            {
-                var fieldNames = string.Join(',', providerFields.Select(x => x.Name));
-                error = $"{error}; FieldNames:{fieldNames}";
-            }
-
-            throw new SearchException(error, exception);
-        }
 
         protected virtual SearchClient GetSearchIndexClient(string indexName)
         {
