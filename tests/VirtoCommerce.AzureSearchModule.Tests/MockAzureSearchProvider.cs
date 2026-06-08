@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Azure.Search.Documents.Indexes.Models;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using VirtoCommerce.AzureSearchModule.Data;
 using VirtoCommerce.Platform.Core.Settings;
@@ -20,7 +21,7 @@ namespace VirtoCommerce.AzureSearchModule.Tests
             ISettingsManager settingsManager,
             IAzureSearchDocumentsRequestBuilder requestBuilder,
             IAzureSearchDocumentsResponseBuilder responseBuilder) :
-            base(azureSearchOptions, searchOptions, settingsManager, requestBuilder, responseBuilder, null)
+            base(azureSearchOptions, searchOptions, settingsManager, requestBuilder, responseBuilder, NullLogger<AzureSearchDocumentsProvider>.Instance)
         {
             IsIndexExistsAsyncCalled = false;
         }
