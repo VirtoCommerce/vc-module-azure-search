@@ -123,7 +123,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
 
             try
             {
-                indexName = GetIndexName(ActiveIndexAlias, documentType);
+                indexName = GetIndexAlias(ActiveIndexAlias, documentType);
 
                 var providerDocuments = documents.Select(document => ConvertToProviderDocument(document, null, documentType)).ToList();
 
@@ -209,7 +209,7 @@ namespace VirtoCommerce.AzureSearchModule.Data
 
             try
             {
-                indexName = GetIndexName(documentType);
+                indexName = GetIndexName(request.UseBackupIndex, documentType);
 
                 var indexClient = GetSearchIndexClient(indexName);
 
