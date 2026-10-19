@@ -311,8 +311,10 @@ namespace VirtoCommerce.AzureSearchModule.Data
                 backupAliasDefinition.Value.Indexes.Clear();
                 backupAliasDefinition.Value.Indexes.Add(activeIndexName);
 
-                await Client.CreateOrUpdateAliasAsync(activeIndexAlias, activeAliasDefinition.Value);
-                await Client.CreateOrUpdateAliasAsync(backupIndexAlias, backupAliasDefinition.Value);
+                // Azure.Search.Documents 12.x: CreateOrUpdateAliasAsync takes the SearchAlias directly
+                // (the alias name is read from SearchAlias.Name, which these definitions already carry).
+                await Client.CreateOrUpdateAliasAsync(activeAliasDefinition.Value);
+                await Client.CreateOrUpdateAliasAsync(backupAliasDefinition.Value);
             }
 
             RemoveMappingFromCache(backupIndexAlias);
