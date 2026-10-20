@@ -68,35 +68,21 @@ public class AzureSearchUnitTests
     }
 
     [Fact]
-    public void BuildRequest_WithIncludeFields_LimitsSelectToRequestedFieldsAndKey()
+    public void BuildRequest_NeverRestrictsSelect_EvenWithIncludeFields()
     {
-        // Arrange: VP-9334 / VCST-6425 - honour SearchRequest.IncludeFields so the
-        // provider asks Azure for only the requested fields instead of full documents.
+        // VP-9334 / VCST-6425 is fixed by the Azure.Search.Documents SDK upgrade (TrySkip).
+        // The module deliberately does NOT translate SearchRequest.IncludeFields into
+        // SearchOptions.Select: a $select must exactly match Azure's field rules (the field
+        // must exist AND be retrievable) or Azure rejects the whole query with HTTP 400
+        // (e.g. the non-retrievable "__object" field requested during cart merge). So Select
+        // is always left empty and Azure returns all retrievable fields, as it did originally.
         var request = new SearchRequest
         {
-            IncludeFields = new List<string> { "Name", "Code" },
+            IncludeFields = new List<string> { "Name", "Code", "__object", "__object_id" },
         };
 
-        // Act
         var requests = _requestBuilder.BuildRequest(request, "test-index", "Product", new List<SearchField>(), SearchQueryType.Simple);
 
-        // Assert
-        var select = requests[0].SearchOptions.Select;
-        Assert.Contains(AzureSearchHelper.KeyFieldName, select); // key field is required to resolve Document.Id
-        Assert.Contains(AzureSearchHelper.ToAzureFieldName("Name"), select);
-        Assert.Contains(AzureSearchHelper.ToAzureFieldName("Code"), select);
-    }
-
-    [Fact]
-    public void BuildRequest_WithoutIncludeFields_LeavesSelectEmpty()
-    {
-        // Arrange: no IncludeFields -> preserve current behaviour (Azure returns all retrievable fields).
-        var request = new SearchRequest();
-
-        // Act
-        var requests = _requestBuilder.BuildRequest(request, "test-index", "Product", new List<SearchField>(), SearchQueryType.Simple);
-
-        // Assert
         Assert.Empty(requests[0].SearchOptions.Select);
     }
 
