@@ -76,15 +76,47 @@ public class AzureSearchUnitTests
         {
             IncludeFields = new List<string> { "Name", "Code" },
         };
+        var availableFields = new List<SearchField>
+        {
+            new(AzureSearchHelper.KeyFieldName, SearchFieldDataType.String),
+            new(AzureSearchHelper.ToAzureFieldName("Name"), SearchFieldDataType.String),
+            new(AzureSearchHelper.ToAzureFieldName("Code"), SearchFieldDataType.String),
+        };
 
         // Act
-        var requests = _requestBuilder.BuildRequest(request, "test-index", "Product", new List<SearchField>(), SearchQueryType.Simple);
+        var requests = _requestBuilder.BuildRequest(request, "test-index", "Product", availableFields, SearchQueryType.Simple);
 
         // Assert
         var select = requests[0].SearchOptions.Select;
         Assert.Contains(AzureSearchHelper.KeyFieldName, select); // key field is required to resolve Document.Id
         Assert.Contains(AzureSearchHelper.ToAzureFieldName("Name"), select);
         Assert.Contains(AzureSearchHelper.ToAzureFieldName("Code"), select);
+    }
+
+    [Fact]
+    public void BuildRequest_WithIncludeFieldNotInIndex_ExcludesItFromSelect()
+    {
+        // VP-9334 regression guard: a requested field that is not in the index schema (e.g. the storefront's
+        // virtual "__object_id") must NOT be added to $select, or Azure rejects the whole query with HTTP 400
+        // "Could not find a property named 'f___object_id'".
+        var request = new SearchRequest
+        {
+            IncludeFields = new List<string> { "Name", "__object_id" },
+        };
+        var availableFields = new List<SearchField>
+        {
+            new(AzureSearchHelper.KeyFieldName, SearchFieldDataType.String),
+            new(AzureSearchHelper.ToAzureFieldName("Name"), SearchFieldDataType.String),
+        };
+
+        // Act
+        var requests = _requestBuilder.BuildRequest(request, "test-index", "Product", availableFields, SearchQueryType.Simple);
+
+        // Assert
+        var select = requests[0].SearchOptions.Select;
+        Assert.Contains(AzureSearchHelper.ToAzureFieldName("Name"), select);          // f_name exists -> selected
+        Assert.DoesNotContain(AzureSearchHelper.ToAzureFieldName("__object_id"), select); // f___object_id not in index -> excluded
+        Assert.Contains(AzureSearchHelper.KeyFieldName, select);                      // key always included
     }
 
     [Fact]

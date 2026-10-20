@@ -51,6 +51,9 @@ namespace VirtoCommerce.AzureSearchModule.Data
             var primaryRequest = BuildPrimaryRequest(request, queryParserType, searchText, primaryFilter, sorting, primaryFacets);
 
             result.Insert(0, primaryRequest);
+
+            ApplyIncludeFields(result, request, availableFields);
+
             return result;
         }
 
@@ -100,8 +103,6 @@ namespace VirtoCommerce.AzureSearchModule.Data
                 searchOptions.OrderBy.AddRange(sorting);
             }
 
-            ApplyIncludeFields(searchOptions, request);
-
             return new AzureSearchRequest { SearchOptions = searchOptions };
         }
 
@@ -132,34 +133,45 @@ namespace VirtoCommerce.AzureSearchModule.Data
                 searchRequest.SearchOptions.Facets.AddRange(facets);
             }
 
-            ApplyIncludeFields(searchRequest.SearchOptions, request);
-
             return searchRequest;
         }
 
         /// <summary>
-        /// Honours <see cref="SearchRequest.IncludeFields"/> by limiting the Azure request to the requested fields
-        /// via <c>SearchOptions.Select</c>. This avoids retrieving full documents, which both reduces payload size
-        /// and sharply lowers the chance of hitting the Azure.Search.Documents async-deserialization buffer-boundary
-        /// bug (VP-9334 / VCST-6425). The key field is always included so the response builder can resolve Document.Id.
-        /// When no fields are requested, <c>Select</c> is left empty and Azure returns all retrievable fields.
+        /// Honours <see cref="SearchRequest.IncludeFields"/> by limiting every Azure request to the requested fields
+        /// via <c>SearchOptions.Select</c>. Returning only the requested fields instead of full documents both reduces
+        /// payload size and sharply lowers the chance of hitting the Azure.Search.Documents async-deserialization
+        /// buffer-boundary bug (VP-9334 / VCST-6425). The key field is always included so the response builder can
+        /// resolve Document.Id. Only fields that exist in the index (<paramref name="availableFields"/>) are selected:
+        /// a requested field that is not indexed (for example the storefront's virtual "__object_id") would otherwise
+        /// make Azure reject the whole <c>$select</c> with HTTP 400. When no fields are requested, <c>Select</c> is
+        /// left empty and Azure returns all retrievable fields.
         /// </summary>
-        protected virtual void ApplyIncludeFields(Azure.Search.Documents.SearchOptions searchOptions, SearchRequest request)
+        protected virtual void ApplyIncludeFields(IList<AzureSearchRequest> requests, SearchRequest request, IList<SearchField> availableFields)
         {
             if (request.IncludeFields.IsNullOrEmpty())
             {
                 return;
             }
 
-            searchOptions.Select.Add(AzureSearchHelper.KeyFieldName);
+            // Always include the key field so the response builder can resolve Document.Id.
+            var selectFields = new List<string> { AzureSearchHelper.KeyFieldName };
 
-            foreach (var azureFieldName in request.IncludeFields
-                         .Select(AzureSearchHelper.ToAzureFieldName)
-                         .Where(name => !string.IsNullOrEmpty(name)))
+            // Only select fields that actually exist in the index schema; an unknown field makes Azure reject $select.
+            foreach (var field in request.IncludeFields)
             {
-                if (!searchOptions.Select.Contains(azureFieldName))
+                var providerField = availableFields.Get(field);
+                if (providerField != null && !selectFields.Contains(providerField.Name))
                 {
-                    searchOptions.Select.Add(azureFieldName);
+                    selectFields.Add(providerField.Name);
+                }
+            }
+
+            foreach (var searchRequest in requests)
+            {
+                searchRequest.SearchOptions.Select.Clear();
+                foreach (var azureFieldName in selectFields)
+                {
+                    searchRequest.SearchOptions.Select.Add(azureFieldName);
                 }
             }
         }
