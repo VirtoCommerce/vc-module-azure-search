@@ -100,6 +100,8 @@ namespace VirtoCommerce.AzureSearchModule.Data
                 searchOptions.OrderBy.AddRange(sorting);
             }
 
+            ApplyIncludeFields(searchOptions, request);
+
             return new AzureSearchRequest { SearchOptions = searchOptions };
         }
 
@@ -130,7 +132,36 @@ namespace VirtoCommerce.AzureSearchModule.Data
                 searchRequest.SearchOptions.Facets.AddRange(facets);
             }
 
+            ApplyIncludeFields(searchRequest.SearchOptions, request);
+
             return searchRequest;
+        }
+
+        /// <summary>
+        /// Honours <see cref="SearchRequest.IncludeFields"/> by limiting the Azure request to the requested fields
+        /// via <c>SearchOptions.Select</c>. This avoids retrieving full documents, which both reduces payload size
+        /// and sharply lowers the chance of hitting the Azure.Search.Documents async-deserialization buffer-boundary
+        /// bug (VP-9334 / VCST-6425). The key field is always included so the response builder can resolve Document.Id.
+        /// When no fields are requested, <c>Select</c> is left empty and Azure returns all retrievable fields.
+        /// </summary>
+        protected virtual void ApplyIncludeFields(Azure.Search.Documents.SearchOptions searchOptions, SearchRequest request)
+        {
+            if (request.IncludeFields.IsNullOrEmpty())
+            {
+                return;
+            }
+
+            searchOptions.Select.Add(AzureSearchHelper.KeyFieldName);
+
+            foreach (var azureFieldName in request.IncludeFields
+                         .Select(AzureSearchHelper.ToAzureFieldName)
+                         .Where(name => !string.IsNullOrEmpty(name)))
+            {
+                if (!searchOptions.Select.Contains(azureFieldName))
+                {
+                    searchOptions.Select.Add(azureFieldName);
+                }
+            }
         }
 
         protected virtual string GetSearchText(SearchRequest request)
